@@ -92,7 +92,7 @@ struct RepositorySearchView: View {
             if isEmpty {
                 emptyView
             } else {
-                resultsPlaceholder
+                repositoryList
             }
         case let .error(message):
             errorView(message: message)
@@ -123,10 +123,16 @@ struct RepositorySearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var resultsPlaceholder: some View {
-        Text("検索結果(未実装)")
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var repositoryList: some View {
+        List(model.repositories) { repo in
+            NavigationLink(value: RepositorySearchRoute.repositoryDetail(
+                ownerLogin: repo.owner.login,
+                repositoryName: repo.name
+            )) {
+                RepositoryRow(repository: repo)
+            }
+        }
+        .listStyle(.plain)
     }
 
     private func errorView(message: String) -> some View {

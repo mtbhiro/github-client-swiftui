@@ -15,3 +15,16 @@
 - actor 境界や Task 境界をまたぐ型は `Sendable` を意識して設計し、`@unchecked Sendable` は原則として使用しない。
 - テストは Swift Testing を主に使用する。
 - GitHub API は初期実装では unauthenticated で利用し、将来的な認証機能追加に備えて API Client を差し替えやすくする。
+
+# xcodebuild による品質保証
+
+- コード変更後はビルドとテストビルドで品質を確認する。
+- **シミュレータを起動してはならない。** `xcodebuild test` はシミュレータを起動しアプリを実行するため使用禁止。
+- ビルド確認には `build-for-testing` を使用する。これはコンパイルとテストターゲットのリンクのみを行い、シミュレータを起動しない。
+- ユニットテスト実行が必要な場合は `test-without-building` を使い、事前に起動済みのシミュレータがある場合のみ実行する。通常は `build-for-testing` の成功で十分とする。
+- destination は `'platform=iOS Simulator,name=iPhone 17,OS=26.4.1'` を使用する。
+- コマンド例:
+  ```sh
+  # ビルド確認（テストターゲット含む）
+  xcodebuild -scheme github-client-swiftui -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4.1' build-for-testing
+  ```

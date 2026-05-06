@@ -14,43 +14,44 @@ final class RepositorySearchModel {
     var query: String = "" {
         didSet {
             guard query != oldValue else { return }
-            onQueryChanged(oldValue: oldValue, newValue: query)
+            onQueryChanged()
         }
     }
 
     private(set) var phase: RepositorySearchPhase = .idle
+    private(set) var repositories: [GitHubRepository] = []
 
     private var searchTask: Task<Void, Never>?
+    private let repository: RepositorySearchRepositoryProtocol
+    private let debounceDuration: Duration
 
-    private let debounceDuration: Duration = .milliseconds(300)
-    private let fakeLoadDuration: Duration = .seconds(1)
-
-    func onAppear() {
-        print("[RepositorySearchModel] onAppear")
+    init(
+        repository: RepositorySearchRepositoryProtocol = MockRepositorySearchRepository(),
+        debounceDuration: Duration = .milliseconds(300)
+    ) {
+        self.repository = repository
+        self.debounceDuration = debounceDuration
     }
 
+    func onAppear() {}
+
     func onDisappear() {
-        print("[RepositorySearchModel] onDisappear — cancel pending tasks")
         cancelSearch()
     }
 
     func onSubmit() {
-        print("[RepositorySearchModel] onSubmit query=\(query)")
         startSearch(debounce: false)
     }
 
     func clearQuery() {
-        print("[RepositorySearchModel] clearQuery")
         query = ""
     }
 
     func retry() {
-        print("[RepositorySearchModel] retry query=\(query)")
         startSearch(debounce: false)
     }
 
-    private func onQueryChanged(oldValue: String, newValue: String) {
-        print("[RepositorySearchModel] queryChanged old=\"\(oldValue)\" new=\"\(newValue)\" — debounce reset")
+    private func onQueryChanged() {
         startSearch(debounce: true)
     }
 
@@ -60,32 +61,32 @@ final class RepositorySearchModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             phase = .idle
+            repositories = []
             return
         }
 
         phase = .loading
 
         let debounceDuration = debounceDuration
-        let fakeLoadDuration = fakeLoadDuration
+        let repo = repository
 
         searchTask = Task { [weak self] in
             do {
                 if debounce {
                     try await Task.sleep(for: debounceDuration)
                 }
-                try await Task.sleep(for: fakeLoadDuration)
+                let results = try await repo.searchRepositories(query: trimmed, page: 1)
                 try Task.checkCancellation()
+                guard let self else { return }
+                self.repositories = results
+                self.phase = .loaded(isEmpty: results.isEmpty)
             } catch is CancellationError {
-                print("[RepositorySearchModel] search cancelled query=\"\(trimmed)\"")
                 return
             } catch {
-                print("[RepositorySearchModel] search sleep error=\(error)")
-                return
+                guard let self else { return }
+                guard !Task.isCancelled else { return }
+                self.phase = .error(message: error.localizedDescription)
             }
-
-            guard let self else { return }
-            print("[RepositorySearchModel] search finished query=\"\(trimmed)\"")
-            self.phase = .loaded(isEmpty: false)
         }
     }
 
