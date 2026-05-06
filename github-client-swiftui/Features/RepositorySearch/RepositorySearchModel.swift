@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum RepositorySearchPhase: Sendable {
+enum RepositorySearchPhase: Sendable, Equatable {
     case idle
     case loading
     case loaded(isEmpty: Bool)
