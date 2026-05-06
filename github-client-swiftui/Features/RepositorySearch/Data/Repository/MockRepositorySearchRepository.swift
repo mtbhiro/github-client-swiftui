@@ -1,6 +1,8 @@
 import Foundation
 
 final class MockRepositorySearchRepository: RepositorySearchRepositoryProtocol, @unchecked Sendable {
+    nonisolated init() {}
+
     var result: Result<[GitHubRepository], Error> = .success(GitHubRepository.samples)
     private(set) var searchCallCount = 0
     private(set) var lastQuery: String?

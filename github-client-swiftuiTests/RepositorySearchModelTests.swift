@@ -6,11 +6,11 @@ import Testing
 struct RepositorySearchModelTests {
 
     private func makeSUT(
-        result: Result<[GitHubRepository], Error> = .success(GitHubRepository.samples),
+        result: Result<[GitHubRepository], Error>? = nil,
         debounceDuration: Duration = .milliseconds(0)
     ) -> (model: RepositorySearchModel, mock: MockRepositorySearchRepository) {
         let mock = MockRepositorySearchRepository()
-        mock.result = result
+        mock.result = result ?? .success(GitHubRepository.samples)
         let model = RepositorySearchModel(
             repository: mock,
             debounceDuration: debounceDuration
