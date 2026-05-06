@@ -11,7 +11,7 @@ import SwiftUI
 struct github_client_swiftuiApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
     }
 }
