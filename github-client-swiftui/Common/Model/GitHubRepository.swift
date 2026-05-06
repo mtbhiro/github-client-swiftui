@@ -1,6 +1,6 @@
 import Foundation
 
-struct GitHubRepository: Sendable, Identifiable, Hashable {
+nonisolated struct GitHubRepository: Sendable, Identifiable, Hashable {
     let id: Int
     let name: String
     let fullName: String
@@ -13,7 +13,7 @@ struct GitHubRepository: Sendable, Identifiable, Hashable {
     let topics: [String]
 }
 
-struct GitHubRepositoryOwner: Sendable, Hashable {
+nonisolated struct GitHubRepositoryOwner: Sendable, Hashable {
     let login: String
     let id: Int
     let avatarUrl: URL?

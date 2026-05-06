@@ -26,7 +26,7 @@ final class RepositorySearchModel {
     private let debounceDuration: Duration
 
     init(
-        repository: RepositorySearchRepositoryProtocol = MockRepositorySearchRepository(),
+        repository: RepositorySearchRepositoryProtocol = RepositorySearchRepository(),
         debounceDuration: Duration = .milliseconds(300)
     ) {
         self.repository = repository
@@ -94,4 +94,5 @@ final class RepositorySearchModel {
         searchTask?.cancel()
         searchTask = nil
     }
+
 }

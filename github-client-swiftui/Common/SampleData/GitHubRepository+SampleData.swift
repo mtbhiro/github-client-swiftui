@@ -1,6 +1,6 @@
 import Foundation
 
-extension GitHubRepository {
+nonisolated extension GitHubRepository {
     static let sampleSwift = GitHubRepository(
         id: 44838949,
         name: "swift",
@@ -43,7 +43,7 @@ extension GitHubRepository {
     static let samples: [GitHubRepository] = [sampleSwift, sampleAlamofire, sampleVapor]
 }
 
-extension GitHubRepositoryOwner {
+nonisolated extension GitHubRepositoryOwner {
     static let sampleApple = GitHubRepositoryOwner(
         login: "apple",
         id: 10639145,

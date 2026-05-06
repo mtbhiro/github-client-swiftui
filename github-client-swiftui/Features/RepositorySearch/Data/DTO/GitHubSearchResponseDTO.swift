@@ -1,6 +1,6 @@
 import Foundation
 
-struct GitHubSearchResponseDTO: Decodable, Sendable {
+nonisolated struct GitHubSearchResponseDTO: Decodable, Sendable {
     let totalCount: Int
     let incompleteResults: Bool
     let items: [GitHubRepositoryDTO]
@@ -12,7 +12,7 @@ struct GitHubSearchResponseDTO: Decodable, Sendable {
     }
 }
 
-struct GitHubRepositoryDTO: Decodable, Sendable {
+nonisolated struct GitHubRepositoryDTO: Decodable, Sendable {
     let id: Int
     let name: String
     let fullName: String
@@ -38,7 +38,7 @@ struct GitHubRepositoryDTO: Decodable, Sendable {
     }
 }
 
-struct GitHubOwnerDTO: Decodable, Sendable {
+nonisolated struct GitHubOwnerDTO: Decodable, Sendable {
     let login: String
     let id: Int
     let avatarUrl: String

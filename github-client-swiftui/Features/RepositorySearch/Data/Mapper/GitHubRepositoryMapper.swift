@@ -1,6 +1,6 @@
 import Foundation
 
-enum GitHubRepositoryMapper {
+nonisolated enum GitHubRepositoryMapper {
     static func map(_ dto: GitHubRepositoryDTO) -> GitHubRepository {
         GitHubRepository(
             id: dto.id,

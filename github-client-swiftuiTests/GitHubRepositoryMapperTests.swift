@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import github_client_swiftui
 
+@MainActor
 struct GitHubRepositoryMapperTests {
 
     @Test func mapDTO_convertsCorrectly() {
