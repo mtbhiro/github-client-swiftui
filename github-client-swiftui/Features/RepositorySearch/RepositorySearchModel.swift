@@ -6,6 +6,11 @@ enum RepositorySearchPhase: Sendable, Equatable {
     case loading
     case loaded(isEmpty: Bool)
     case error(message: String)
+
+    var isLoaded: Bool {
+        if case .loaded = self { return true }
+        return false
+    }
 }
 
 @MainActor
@@ -22,6 +27,7 @@ final class RepositorySearchModel {
     private(set) var repositories: [GitHubRepo] = []
 
     private var searchTask: Task<Void, Never>?
+    private var lastSearchedQuery: String = ""
     private let repository: RepositorySearchRepositoryProtocol
     private let debounceDuration: Duration
 
@@ -55,50 +61,64 @@ final class RepositorySearchModel {
         startSearch(debounce: true)
     }
 
-    private var lastSearchedQuery: String = ""
-
     private func startSearch(debounce: Bool) {
         cancelSearch()
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            phase = .idle
-            repositories = []
-            lastSearchedQuery = ""
+            resetToIdle()
             return
         }
 
-        if !debounce, trimmed == lastSearchedQuery, case .loaded = phase {
-            return
+        if debounce {
+            startDebouncedSearch(query: trimmed)
+        } else {
+            startImmediateSearch(query: trimmed)
         }
+    }
 
-        if !debounce || repositories.isEmpty {
+    private func startImmediateSearch(query: String) {
+        guard query != lastSearchedQuery || !phase.isLoaded else { return }
+        phase = .loading
+        executeSearch(query: query, debounce: false)
+    }
+
+    private func startDebouncedSearch(query: String) {
+        if repositories.isEmpty {
             phase = .loading
         }
+        executeSearch(query: query, debounce: true)
+    }
 
-        let debounceDuration = debounceDuration
-        let repo = repository
-
+    private func executeSearch(query: String, debounce: Bool) {
+        let duration = debounceDuration
         searchTask = Task { [weak self] in
             do {
                 if debounce {
-                    try await Task.sleep(for: debounceDuration)
+                    try await Task.sleep(for: duration)
+                    guard let self else { return }
+                    self.phase = .loading
+                } else {
+                    guard self != nil else { return }
                 }
-                guard let self else { return }
-                self.phase = .loading
-                let results = try await repo.searchRepositories(query: trimmed, page: 1)
+                let results = try await self?.repository.searchRepositories(query: query, page: 1) ?? []
                 try Task.checkCancellation()
+                guard let self else { return }
                 self.repositories = results
-                self.lastSearchedQuery = trimmed
+                self.lastSearchedQuery = query
                 self.phase = .loaded(isEmpty: results.isEmpty)
             } catch is CancellationError {
-                return
             } catch {
-                guard let self else { return }
-                guard !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled else { return }
                 self.phase = .error(message: error.localizedDescription)
             }
         }
+    }
+
+    private func resetToIdle() {
+        phase = .idle
+        repositories = []
+        lastSearchedQuery = ""
     }
 
     private func cancelSearch() {
