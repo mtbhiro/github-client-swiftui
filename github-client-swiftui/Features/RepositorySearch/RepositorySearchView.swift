@@ -145,6 +145,7 @@ struct RepositorySearchView: View {
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
+        .refreshable { await model.refresh() }
     }
 
     private func errorView(message: String) -> some View {

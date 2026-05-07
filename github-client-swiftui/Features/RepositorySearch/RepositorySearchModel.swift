@@ -63,6 +63,26 @@ final class RepositorySearchModel {
         startSearch(debounce: false)
     }
 
+    func refresh() async {
+        cancelSearch()
+        cancelLoadMore()
+
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        do {
+            let results = try await repository.searchRepositories(query: trimmed, page: 1)
+            repositories = results
+            currentPage = 1
+            hasMorePages = results.count >= Self.perPage
+            lastSearchedQuery = trimmed
+            phase = .loaded(isEmpty: results.isEmpty)
+        } catch is CancellationError {
+        } catch {
+            phase = .error(message: error.localizedDescription)
+        }
+    }
+
     func loadNextPageIfNeeded() {
         guard hasMorePages, !isLoadingMore, phase.isLoaded else { return }
 
