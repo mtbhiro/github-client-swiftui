@@ -3,7 +3,7 @@
 - ユーザーとのやり取りでは、常に日本語を使用する。
 - このリポジトリは iOS 17 以降を対象に、SwiftUI で実装する GitHub クライアントである。
 - Swift 6 を使用し、strict concurrency を遵守する。
-- 実装時は `docs/requirements.md` の要求定義を前提にする。
+- 実装時は `github-client-swiftui/docs/requirements.md` の要求定義を前提にする。
 - 状態管理には SwiftUI Observation の `@Observable` を使用し、`ObservableObject` / `@Published` は原則として採用しない。
 - UI 状態を持つ Observable Model は原則として `@MainActor` に隔離する。
 - アーキテクチャは View / Observable Model / Repository / API Client の分離を基本にする。
