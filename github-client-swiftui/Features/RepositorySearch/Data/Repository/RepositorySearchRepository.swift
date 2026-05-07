@@ -7,12 +7,8 @@ nonisolated protocol RepositorySearchRepositoryProtocol: Sendable {
 nonisolated struct RepositorySearchRepository: RepositorySearchRepositoryProtocol {
     private let httpClient: HttpClient
 
-    init(httpClient: HttpClient) {
+    init(httpClient: HttpClient = URLSessionHttpClient()) {
         self.httpClient = httpClient
-    }
-
-    init() {
-        self.httpClient = GitHubHttpClient.shared
     }
 
     func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo] {

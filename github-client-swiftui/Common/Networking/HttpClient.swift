@@ -4,18 +4,39 @@ nonisolated protocol HttpClient: Sendable {
     func send<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> T
 }
 
+nonisolated enum ApiHost: Sendable {
+    case github
+
+    var baseURL: URL {
+        switch self {
+        case .github:
+            URL(string: "https://api.github.com")!
+        }
+    }
+
+    var defaultHeaders: [String: String] {
+        switch self {
+        case .github:
+            ["Accept": "application/vnd.github.v3+json"]
+        }
+    }
+}
+
 nonisolated struct HttpRequest: Sendable {
+    let host: ApiHost
     let method: HttpMethod
     let path: String
     let queryItems: [URLQueryItem]
     let headers: [String: String]
 
     init(
+        host: ApiHost = .github,
         method: HttpMethod = .get,
         path: String,
         queryItems: [URLQueryItem] = [],
         headers: [String: String] = [:]
     ) {
+        self.host = host
         self.method = method
         self.path = path
         self.queryItems = queryItems

@@ -1,16 +1,13 @@
 import Foundation
 
 nonisolated struct URLSessionHttpClient: HttpClient {
-    private let baseURL: URL
     private let session: URLSession
     private let decoder: JSONDecoder
 
     init(
-        baseURL: URL,
         session: URLSession = .shared,
         decoder: JSONDecoder = JSONDecoder()
     ) {
-        self.baseURL = baseURL
         self.session = session
         self.decoder = decoder
     }
@@ -50,6 +47,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
     }
 
     private func buildURLRequest(from request: HttpRequest) throws -> URLRequest {
+        let baseURL = request.host.baseURL
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw HttpClientError.invalidURL
         }
@@ -64,8 +62,10 @@ nonisolated struct URLSessionHttpClient: HttpClient {
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
-        urlRequest.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
 
+        for (key, value) in request.host.defaultHeaders {
+            urlRequest.setValue(value, forHTTPHeaderField: key)
+        }
         for (key, value) in request.headers {
             urlRequest.setValue(value, forHTTPHeaderField: key)
         }

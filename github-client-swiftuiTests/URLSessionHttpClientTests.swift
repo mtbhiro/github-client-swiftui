@@ -15,10 +15,7 @@ struct URLSessionHttpClientTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
         let session = URLSession(configuration: configuration)
-        let client = URLSessionHttpClient(
-            baseURL: URL(string: "https://api.github.com")!,
-            session: session
-        )
+        let client = URLSessionHttpClient(session: session)
         return (client, StubURLProtocol.self)
     }
 
