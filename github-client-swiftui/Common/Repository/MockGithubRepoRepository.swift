@@ -2,6 +2,7 @@ import Foundation
 
 nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, @unchecked Sendable {
     var searchResult: Result<[GitHubRepo], Error>
+    var searchResultHandler: ((String, Int) -> Result<[GitHubRepo], Error>)?
     var fetchResult: Result<GitHubRepoDetail, Error>
     private(set) var searchCallCount = 0
     private(set) var lastQuery: String?
@@ -19,6 +20,9 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
         searchCallCount += 1
         lastQuery = query
         lastPage = page
+        if let handler = searchResultHandler {
+            return try handler(query, page).get()
+        }
         return try searchResult.get()
     }
 

@@ -78,6 +78,7 @@ struct RepositorySearchModelTests {
         #expect(model.repositories == GitHubRepo.samples)
         #expect(mock.lastQuery == "swift")
         #expect(mock.lastPage == 1)
+        #expect(model.hasMorePages == false)
     }
 
     @Test func search_emptyResult_loadsEmpty() async throws {
@@ -120,5 +121,118 @@ struct RepositorySearchModelTests {
         model.query = "second"
         try await Task.sleep(for: .milliseconds(100))
         #expect(mock.lastQuery == "second")
+    }
+
+    // MARK: - Pagination
+
+    @Test func search_fullPage_setsHasMorePages() async throws {
+        let fullPage = makeRepos(count: 30)
+        let (model, _) = makeSUT(result: .success(fullPage))
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(model.hasMorePages == true)
+        #expect(model.repositories.count == 30)
+    }
+
+    @Test func loadNextPageIfNeeded_loadsNextPage() async throws {
+        let page1 = makeRepos(count: 30, startId: 1)
+        let page2 = makeRepos(count: 10, startId: 31)
+        let (model, mock) = makeSUT(result: .success(page1))
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(model.hasMorePages == true)
+
+        mock.searchResult = .success(page2)
+        model.loadNextPageIfNeeded()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(model.repositories.count == 40)
+        #expect(mock.lastPage == 2)
+        #expect(model.hasMorePages == false)
+        #expect(model.isLoadingMore == false)
+    }
+
+    @Test func loadNextPageIfNeeded_doesNothingWhenNoMorePages() async throws {
+        let (model, mock) = makeSUT()
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(model.hasMorePages == false)
+
+        let callCountBefore = mock.searchCallCount
+        model.loadNextPageIfNeeded()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(mock.searchCallCount == callCountBefore)
+    }
+
+    @Test func loadNextPageIfNeeded_doesNothingWhileAlreadyLoading() async throws {
+        let page1 = makeRepos(count: 30, startId: 1)
+        let (model, mock) = makeSUT(result: .success(page1))
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+
+        mock.searchResult = .success(makeRepos(count: 30, startId: 31))
+        model.loadNextPageIfNeeded()
+        let callCountAfterFirst = mock.searchCallCount
+        model.loadNextPageIfNeeded()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(mock.searchCallCount == callCountAfterFirst)
+    }
+
+    @Test func newSearch_resetsPagination() async throws {
+        let page1 = makeRepos(count: 30, startId: 1)
+        let (model, mock) = makeSUT(result: .success(page1))
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(model.hasMorePages == true)
+
+        let newPage1 = makeRepos(count: 5, startId: 100)
+        mock.searchResult = .success(newPage1)
+        model.query = "rust"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(model.repositories.count == 5)
+        #expect(model.hasMorePages == false)
+        #expect(mock.lastPage == 1)
+    }
+
+    @Test func loadNextPage_error_keepsExistingData() async throws {
+        let page1 = makeRepos(count: 30, startId: 1)
+        let (model, mock) = makeSUT(result: .success(page1))
+        model.query = "swift"
+        model.onSubmit()
+        try await Task.sleep(for: .milliseconds(50))
+
+        mock.searchResult = .failure(URLError(.notConnectedToInternet))
+        model.loadNextPageIfNeeded()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(model.repositories.count == 30)
+        #expect(model.phase == .loaded(isEmpty: false))
+        #expect(model.isLoadingMore == false)
+    }
+
+    private func makeRepos(count: Int, startId: Int = 1) -> [GitHubRepo] {
+        (startId..<startId + count).map { id in
+            GitHubRepo(
+                id: id,
+                name: "repo-\(id)",
+                fullName: "owner/repo-\(id)",
+                owner: .sampleApple,
+                description: nil,
+                htmlUrl: URL(string: "https://github.com/owner/repo-\(id)")!,
+                stargazersCount: 0,
+                forksCount: 0,
+                language: nil,
+                topics: []
+            )
+        }
     }
 }

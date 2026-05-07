@@ -125,12 +125,22 @@ struct RepositorySearchView: View {
     }
 
     private var repositoryList: some View {
-        List(model.repositories) { repo in
-            NavigationLink(value: RepositorySearchRoute.repositoryDetail(
-                ownerLogin: repo.owner.login,
-                repositoryName: repo.name
-            )) {
-                RepositoryRow(repository: repo)
+        List {
+            ForEach(model.repositories) { repo in
+                NavigationLink(value: RepositorySearchRoute.repositoryDetail(
+                    ownerLogin: repo.owner.login,
+                    repositoryName: repo.name
+                )) {
+                    RepositoryRow(repository: repo)
+                }
+            }
+
+            if model.hasMorePages {
+                ProgressView()
+                    .id(model.repositories.count)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowSeparator(.hidden)
+                    .onAppear { model.loadNextPageIfNeeded() }
             }
         }
         .listStyle(.plain)
