@@ -28,11 +28,11 @@ final class RepositorySearchModel {
 
     private var searchTask: Task<Void, Never>?
     private var lastSearchedQuery: String = ""
-    private let repository: RepositorySearchRepositoryProtocol
+    private let repository: GithubRepoRepositoryProtocol
     private let debounceDuration: Duration
 
     init(
-        repository: RepositorySearchRepositoryProtocol = RepositorySearchRepository(),
+        repository: GithubRepoRepositoryProtocol = GithubRepoRepository(),
         debounceDuration: Duration = .milliseconds(300)
     ) {
         self.repository = repository

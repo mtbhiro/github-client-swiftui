@@ -24,10 +24,10 @@ struct RepositorySearchView: View {
             .navigationDestination(for: RepositorySearchRoute.self) { route in
                 switch route {
                 case let .repositoryDetail(ownerLogin, repositoryName):
-                    Text("リポジトリ詳細(未実装)\n\(ownerLogin)/\(repositoryName)")
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                        .padding()
+                    RepositoryDetailView(
+                        ownerLogin: ownerLogin,
+                        repositoryName: repositoryName
+                    )
                 }
             }
             .onAppear { model.onAppear() }
