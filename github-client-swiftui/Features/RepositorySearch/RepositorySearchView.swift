@@ -47,6 +47,7 @@ struct RepositorySearchView: View {
                     .submitLabel(.search)
                     .focused($isQueryFieldFocused)
                     .onSubmit {
+                        isQueryFieldFocused = false
                         model.onSubmit()
                     }
 
@@ -133,6 +134,7 @@ struct RepositorySearchView: View {
             }
         }
         .listStyle(.plain)
+        .scrollDismissesKeyboard(.immediately)
     }
 
     private func errorView(message: String) -> some View {

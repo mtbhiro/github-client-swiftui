@@ -55,6 +55,8 @@ final class RepositorySearchModel {
         startSearch(debounce: true)
     }
 
+    private var lastSearchedQuery: String = ""
+
     private func startSearch(debounce: Bool) {
         cancelSearch()
 
@@ -62,10 +64,17 @@ final class RepositorySearchModel {
         guard !trimmed.isEmpty else {
             phase = .idle
             repositories = []
+            lastSearchedQuery = ""
             return
         }
 
-        phase = .loading
+        if !debounce, trimmed == lastSearchedQuery, case .loaded = phase {
+            return
+        }
+
+        if !debounce || repositories.isEmpty {
+            phase = .loading
+        }
 
         let debounceDuration = debounceDuration
         let repo = repository
@@ -75,10 +84,12 @@ final class RepositorySearchModel {
                 if debounce {
                     try await Task.sleep(for: debounceDuration)
                 }
+                guard let self else { return }
+                self.phase = .loading
                 let results = try await repo.searchRepositories(query: trimmed, page: 1)
                 try Task.checkCancellation()
-                guard let self else { return }
                 self.repositories = results
+                self.lastSearchedQuery = trimmed
                 self.phase = .loaded(isEmpty: results.isEmpty)
             } catch is CancellationError {
                 return
