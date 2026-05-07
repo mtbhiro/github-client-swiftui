@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RepositoryDetailView: View {
     @State private var model: RepositoryDetailModel
+    @State private var showIssueList = false
 
     init(ownerLogin: String, repositoryName: String, repository: GithubRepoRepositoryProtocol = GithubRepoRepository()) {
         _model = State(initialValue: RepositoryDetailModel(
@@ -27,6 +28,14 @@ struct RepositoryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.onAppear() }
         .onDisappear { model.onDisappear() }
+        .sheet(isPresented: $showIssueList) {
+            if case let .loaded(repo) = model.phase {
+                IssueListView(
+                    ownerLogin: repo.owner.login,
+                    repositoryName: repo.name
+                )
+            }
+        }
     }
 
     private func repositoryContent(_ repo: GitHubRepoDetail) -> some View {
@@ -127,7 +136,7 @@ struct RepositoryDetailView: View {
             }
             detailRow(icon: "arrow.branch", label: "デフォルトブランチ", value: repo.defaultBranch)
             Divider().padding(.leading, 44)
-            detailRow(icon: "exclamationmark.circle", label: "Issues", value: "\(repo.openIssuesCount)")
+            issueRow(count: repo.openIssuesCount)
             Divider().padding(.leading, 44)
             linkRow(icon: "safari", label: "GitHub で開く", url: repo.htmlUrl)
         }
@@ -160,6 +169,30 @@ struct RepositoryDetailView: View {
                     .font(.subheadline)
                 Spacer()
                 Image(systemName: "arrow.up.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func issueRow(count: Int) -> some View {
+        Button {
+            showIssueList = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.circle")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+                Text("Issues")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("\(count)")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
