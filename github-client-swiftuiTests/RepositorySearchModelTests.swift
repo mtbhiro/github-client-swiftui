@@ -6,11 +6,11 @@ import Testing
 struct RepositorySearchModelTests {
 
     private func makeSUT(
-        result: Result<[GitHubRepository], Error>? = nil,
+        result: Result<[GitHubRepo], Error>? = nil,
         debounceDuration: Duration = .milliseconds(0)
     ) -> (model: RepositorySearchModel, mock: MockRepositorySearchRepository) {
         let mock = MockRepositorySearchRepository()
-        mock.result = result ?? .success(GitHubRepository.samples)
+        mock.result = result ?? .success(GitHubRepo.samples)
         let model = RepositorySearchModel(
             repository: mock,
             debounceDuration: debounceDuration
@@ -74,7 +74,7 @@ struct RepositorySearchModelTests {
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
         #expect(model.phase == .loaded(isEmpty: false))
-        #expect(model.repositories == GitHubRepository.samples)
+        #expect(model.repositories == GitHubRepo.samples)
         #expect(mock.lastQuery == "swift")
         #expect(mock.lastPage == 1)
     }

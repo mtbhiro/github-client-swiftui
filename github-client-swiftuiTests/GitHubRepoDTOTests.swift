@@ -3,7 +3,7 @@ import Foundation
 @testable import github_client_swiftui
 
 @MainActor
-struct GitHubRepositoryDTOTests {
+struct GitHubRepoDTOTests {
 
     @Test func toDomain_convertsCorrectly() {
         let ownerDTO = GitHubOwnerDTO(
@@ -12,7 +12,7 @@ struct GitHubRepositoryDTOTests {
             avatarUrl: "https://avatars.githubusercontent.com/u/10639145?v=4",
             htmlUrl: "https://github.com/apple"
         )
-        let repoDTO = GitHubRepositoryDTO(
+        let repoDTO = GitHubRepoDTO(
             id: 44838949,
             name: "swift",
             fullName: "apple/swift",
@@ -48,7 +48,7 @@ struct GitHubRepositoryDTOTests {
             avatarUrl: "https://example.com/avatar.png",
             htmlUrl: "https://github.com/test"
         )
-        let repoDTO = GitHubRepositoryDTO(
+        let repoDTO = GitHubRepoDTO(
             id: 1,
             name: "test",
             fullName: "test/test",
@@ -79,14 +79,14 @@ struct GitHubRepositoryDTOTests {
             totalCount: 2,
             incompleteResults: false,
             items: [
-                GitHubRepositoryDTO(
+                GitHubRepoDTO(
                     id: 1, name: "repo1", fullName: "org/repo1",
                     owner: ownerDTO, description: "First",
                     htmlUrl: "https://github.com/org/repo1",
                     stargazersCount: 100, forksCount: 10,
                     language: "Swift", topics: ["ios"]
                 ),
-                GitHubRepositoryDTO(
+                GitHubRepoDTO(
                     id: 2, name: "repo2", fullName: "org/repo2",
                     owner: ownerDTO, description: "Second",
                     htmlUrl: "https://github.com/org/repo2",

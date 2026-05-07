@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated protocol RepositorySearchRepositoryProtocol: Sendable {
-    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepository]
+    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo]
 }
 
 nonisolated struct RepositorySearchRepository: RepositorySearchRepositoryProtocol {
@@ -15,7 +15,7 @@ nonisolated struct RepositorySearchRepository: RepositorySearchRepositoryProtoco
         self.httpClient = GitHubHttpClient.shared
     }
 
-    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepository] {
+    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo] {
         let request = HttpRequest(
             path: "/search/repositories",
             queryItems: [

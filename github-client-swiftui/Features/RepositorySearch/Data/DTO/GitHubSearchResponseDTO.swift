@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct GitHubSearchResponseDTO: Decodable, Sendable {
     let totalCount: Int
     let incompleteResults: Bool
-    let items: [GitHubRepositoryDTO]
+    let items: [GitHubRepoDTO]
 
     private enum CodingKeys: String, CodingKey {
         case totalCount = "total_count"
@@ -11,12 +11,12 @@ nonisolated struct GitHubSearchResponseDTO: Decodable, Sendable {
         case items
     }
 
-    func toDomain() -> [GitHubRepository] {
+    func toDomain() -> [GitHubRepo] {
         items.map { $0.toDomain() }
     }
 }
 
-nonisolated struct GitHubRepositoryDTO: Decodable, Sendable {
+nonisolated struct GitHubRepoDTO: Decodable, Sendable {
     let id: Int
     let name: String
     let fullName: String
@@ -41,12 +41,12 @@ nonisolated struct GitHubRepositoryDTO: Decodable, Sendable {
         case topics
     }
 
-    func toDomain() -> GitHubRepository {
-        GitHubRepository(
+    func toDomain() -> GitHubRepo {
+        GitHubRepo(
             id: id,
             name: name,
             fullName: fullName,
-            owner: GitHubRepositoryOwner(
+            owner: GitHubRepoOwner(
                 login: owner.login,
                 id: owner.id,
                 avatarUrl: URL(string: owner.avatarUrl),

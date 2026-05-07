@@ -1,7 +1,7 @@
 import Foundation
 
-nonisolated extension GitHubRepository {
-    static let sampleSwift = GitHubRepository(
+nonisolated extension GitHubRepo {
+    static let sampleSwift = GitHubRepo(
         id: 44838949,
         name: "swift",
         fullName: "apple/swift",
@@ -14,7 +14,7 @@ nonisolated extension GitHubRepository {
         topics: ["swift", "compiler", "programming-language"]
     )
 
-    static let sampleAlamofire = GitHubRepository(
+    static let sampleAlamofire = GitHubRepo(
         id: 15062869,
         name: "Alamofire",
         fullName: "Alamofire/Alamofire",
@@ -27,7 +27,7 @@ nonisolated extension GitHubRepository {
         topics: ["swift", "networking", "ios"]
     )
 
-    static let sampleVapor = GitHubRepository(
+    static let sampleVapor = GitHubRepo(
         id: 44965362,
         name: "vapor",
         fullName: "vapor/vapor",
@@ -40,25 +40,25 @@ nonisolated extension GitHubRepository {
         topics: ["swift", "server", "web-framework"]
     )
 
-    static let samples: [GitHubRepository] = [sampleSwift, sampleAlamofire, sampleVapor]
+    static let samples: [GitHubRepo] = [sampleSwift, sampleAlamofire, sampleVapor]
 }
 
-nonisolated extension GitHubRepositoryOwner {
-    static let sampleApple = GitHubRepositoryOwner(
+nonisolated extension GitHubRepoOwner {
+    static let sampleApple = GitHubRepoOwner(
         login: "apple",
         id: 10639145,
         avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/10639145?v=4"),
         htmlUrl: URL(string: "https://github.com/apple")!
     )
 
-    static let sampleAlamofireOrg = GitHubRepositoryOwner(
+    static let sampleAlamofireOrg = GitHubRepoOwner(
         login: "Alamofire",
         id: 7774181,
         avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/7774181?v=4"),
         htmlUrl: URL(string: "https://github.com/Alamofire")!
     )
 
-    static let sampleVaporOrg = GitHubRepositoryOwner(
+    static let sampleVaporOrg = GitHubRepoOwner(
         login: "vapor",
         id: 17364220,
         avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/17364220?v=4"),

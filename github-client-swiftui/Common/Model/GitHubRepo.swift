@@ -1,10 +1,10 @@
 import Foundation
 
-nonisolated struct GitHubRepository: Sendable, Identifiable, Hashable {
+nonisolated struct GitHubRepo: Sendable, Identifiable, Hashable {
     let id: Int
     let name: String
     let fullName: String
-    let owner: GitHubRepositoryOwner
+    let owner: GitHubRepoOwner
     let description: String?
     let htmlUrl: URL
     let stargazersCount: Int
@@ -13,7 +13,7 @@ nonisolated struct GitHubRepository: Sendable, Identifiable, Hashable {
     let topics: [String]
 }
 
-nonisolated struct GitHubRepositoryOwner: Sendable, Hashable {
+nonisolated struct GitHubRepoOwner: Sendable, Hashable {
     let login: String
     let id: Int
     let avatarUrl: URL?

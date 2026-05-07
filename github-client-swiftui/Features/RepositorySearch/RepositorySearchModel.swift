@@ -19,7 +19,7 @@ final class RepositorySearchModel {
     }
 
     private(set) var phase: RepositorySearchPhase = .idle
-    private(set) var repositories: [GitHubRepository] = []
+    private(set) var repositories: [GitHubRepo] = []
 
     private var searchTask: Task<Void, Never>?
     private let repository: RepositorySearchRepositoryProtocol

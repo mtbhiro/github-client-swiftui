@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RepositoryRow: View {
-    let repository: GitHubRepository
+    let repository: GitHubRepo
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
