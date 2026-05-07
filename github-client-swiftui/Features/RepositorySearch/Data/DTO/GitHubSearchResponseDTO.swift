@@ -10,6 +10,10 @@ nonisolated struct GitHubSearchResponseDTO: Decodable, Sendable {
         case incompleteResults = "incomplete_results"
         case items
     }
+
+    func toDomain() -> [GitHubRepository] {
+        items.map { $0.toDomain() }
+    }
 }
 
 nonisolated struct GitHubRepositoryDTO: Decodable, Sendable {
@@ -35,6 +39,26 @@ nonisolated struct GitHubRepositoryDTO: Decodable, Sendable {
         case forksCount = "forks_count"
         case language
         case topics
+    }
+
+    func toDomain() -> GitHubRepository {
+        GitHubRepository(
+            id: id,
+            name: name,
+            fullName: fullName,
+            owner: GitHubRepositoryOwner(
+                login: owner.login,
+                id: owner.id,
+                avatarUrl: URL(string: owner.avatarUrl),
+                htmlUrl: URL(string: owner.htmlUrl)!
+            ),
+            description: description,
+            htmlUrl: URL(string: htmlUrl)!,
+            stargazersCount: stargazersCount,
+            forksCount: forksCount,
+            language: language,
+            topics: topics ?? []
+        )
     }
 }
 

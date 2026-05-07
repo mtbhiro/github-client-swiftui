@@ -3,9 +3,9 @@ import Foundation
 @testable import github_client_swiftui
 
 @MainActor
-struct GitHubRepositoryMapperTests {
+struct GitHubRepositoryDTOTests {
 
-    @Test func mapDTO_convertsCorrectly() {
+    @Test func toDomain_convertsCorrectly() {
         let ownerDTO = GitHubOwnerDTO(
             login: "apple",
             id: 10639145,
@@ -25,7 +25,7 @@ struct GitHubRepositoryMapperTests {
             topics: ["swift", "compiler"]
         )
 
-        let repo = GitHubRepositoryMapper.map(repoDTO)
+        let repo = repoDTO.toDomain()
 
         #expect(repo.id == 44838949)
         #expect(repo.name == "swift")
@@ -41,7 +41,7 @@ struct GitHubRepositoryMapperTests {
         #expect(repo.topics == ["swift", "compiler"])
     }
 
-    @Test func mapDTO_nilTopics_becomesEmptyArray() {
+    @Test func toDomain_nilTopics_becomesEmptyArray() {
         let ownerDTO = GitHubOwnerDTO(
             login: "test",
             id: 1,
@@ -61,14 +61,14 @@ struct GitHubRepositoryMapperTests {
             topics: nil
         )
 
-        let repo = GitHubRepositoryMapper.map(repoDTO)
+        let repo = repoDTO.toDomain()
 
         #expect(repo.topics.isEmpty)
         #expect(repo.description == nil)
         #expect(repo.language == nil)
     }
 
-    @Test func mapSearchResponse_convertsAllItems() {
+    @Test func searchResponseToDomain_convertsAllItems() {
         let ownerDTO = GitHubOwnerDTO(
             login: "org",
             id: 1,
@@ -96,7 +96,7 @@ struct GitHubRepositoryMapperTests {
             ]
         )
 
-        let repos = GitHubRepositoryMapper.map(response)
+        let repos = response.toDomain()
 
         #expect(repos.count == 2)
         #expect(repos[0].name == "repo1")

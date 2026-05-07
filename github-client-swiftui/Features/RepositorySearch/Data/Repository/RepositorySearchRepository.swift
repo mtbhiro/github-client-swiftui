@@ -25,6 +25,6 @@ nonisolated struct RepositorySearchRepository: RepositorySearchRepositoryProtoco
             ]
         )
         let response: GitHubSearchResponseDTO = try await httpClient.send(request)
-        return GitHubRepositoryMapper.map(response)
+        return response.toDomain()
     }
 }
