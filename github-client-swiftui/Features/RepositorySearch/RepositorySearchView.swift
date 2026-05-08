@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct RepositorySearchView: View {
+    @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var bookmarkStore
     @State private var model = RepositorySearchModel()
-    @State private var path: [RepositorySearchRoute] = []
     @FocusState private var isQueryFieldFocused: Bool
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var coordinator = coordinator
+        NavigationStack(path: $coordinator.searchPath) {
             VStack(spacing: 0) {
                 searchField
                     .padding(.horizontal, 16)
@@ -22,12 +23,34 @@ struct RepositorySearchView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("リポジトリ検索")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: RepositorySearchRoute.self) { route in
+            .navigationDestination(for: SearchRoute.self) { route in
                 switch route {
                 case let .repositoryDetail(ownerLogin, repositoryName):
                     RepositoryDetailView(
                         ownerLogin: ownerLogin,
-                        repositoryName: repositoryName
+                        repositoryName: repositoryName,
+                        issueListRoute: SearchRoute.issueList(
+                            ownerLogin: ownerLogin,
+                            repositoryName: repositoryName
+                        )
+                    )
+                case let .issueList(ownerLogin, repositoryName):
+                    IssueListView(
+                        ownerLogin: ownerLogin,
+                        repositoryName: repositoryName,
+                        issueDetailRoute: { number in
+                            SearchRoute.issueDetail(
+                                ownerLogin: ownerLogin,
+                                repositoryName: repositoryName,
+                                number: number
+                            )
+                        }
+                    )
+                case let .issueDetail(ownerLogin, repositoryName, number):
+                    IssueDetailView(
+                        ownerLogin: ownerLogin,
+                        repositoryName: repositoryName,
+                        issueNumber: number
                     )
                 }
             }
@@ -154,7 +177,7 @@ struct RepositorySearchView: View {
             language: repo.language,
             createdAt: Date()
         ))
-        return NavigationLink(value: RepositorySearchRoute.repositoryDetail(
+        return NavigationLink(value: SearchRoute.repositoryDetail(
             ownerLogin: repo.owner.login,
             repositoryName: repo.name
         )) {
@@ -189,5 +212,6 @@ struct RepositorySearchView: View {
 
 #Preview {
     RepositorySearchView()
+        .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
 }

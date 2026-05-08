@@ -1,16 +1,11 @@
 import SwiftUI
 
-enum RootTab: Hashable {
-    case search
-    case bookmarks
-    case settings
-}
-
 struct RootView: View {
-    @State private var selection: RootTab = .search
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
-        TabView(selection: $selection) {
+        @Bindable var coordinator = coordinator
+        TabView(selection: $coordinator.selectedTab) {
             RepositorySearchView()
                 .tabItem {
                     Label("検索", systemImage: "magnifyingglass")
@@ -34,5 +29,6 @@ struct RootView: View {
 
 #Preview {
     RootView()
+        .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
 }

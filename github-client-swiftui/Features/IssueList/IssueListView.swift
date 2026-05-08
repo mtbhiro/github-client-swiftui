@@ -1,13 +1,14 @@
 import SwiftUI
 
-struct IssueListView: View {
+struct IssueListView<IssueDetailRoute: Hashable>: View {
     @Environment(BookmarkStore.self) private var bookmarkStore
     @State private var model: IssueListModel
-    @State private var path: [IssueListRoute] = []
+    private let issueDetailRoute: (Int) -> IssueDetailRoute
 
     init(
         ownerLogin: String,
         repositoryName: String,
+        issueDetailRoute: @escaping (Int) -> IssueDetailRoute,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
         _model = State(initialValue: IssueListModel(
@@ -15,50 +16,30 @@ struct IssueListView: View {
             repositoryName: repositoryName,
             repository: repository
         ))
+        self.issueDetailRoute = issueDetailRoute
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
-            Group {
-                switch model.phase {
-                case .loading:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                case let .loaded(isEmpty):
-                    if isEmpty {
-                        emptyView
-                    } else {
-                        issueList
-                    }
-                case let .error(message):
-                    errorView(message: message)
+        Group {
+            switch model.phase {
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case let .loaded(isEmpty):
+                if isEmpty {
+                    emptyView
+                } else {
+                    issueList
                 }
+            case let .error(message):
+                errorView(message: message)
             }
-            .navigationTitle("Issues")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") {
-                        dismiss()
-                    }
-                }
-            }
-            .navigationDestination(for: IssueListRoute.self) { route in
-                switch route {
-                case let .issueDetail(number):
-                    IssueDetailView(
-                        ownerLogin: model.ownerLogin,
-                        repositoryName: model.repositoryName,
-                        issueNumber: number
-                    )
-                }
-            }
-            .onAppear { model.onAppear() }
-            .onDisappear { model.onDisappear() }
         }
+        .navigationTitle("Issues")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { model.onAppear() }
+        .onDisappear { model.onDisappear() }
     }
-
-    @Environment(\.dismiss) private var dismiss
 
     private var emptyView: some View {
         VStack(spacing: 8) {
@@ -100,7 +81,7 @@ struct IssueListView: View {
             isPullRequest: issue.isPullRequest,
             createdAt: Date()
         ))
-        return NavigationLink(value: IssueListRoute.issueDetail(number: issue.number)) {
+        return NavigationLink(value: issueDetailRoute(issue.number)) {
             HStack {
                 IssueRow(issue: issue)
                 Spacer()
@@ -130,35 +111,40 @@ struct IssueListView: View {
     }
 }
 
-enum IssueListRoute: Hashable {
-    case issueDetail(number: Int)
-}
-
 #Preview("Loaded") {
-    IssueListView(
-        ownerLogin: "apple",
-        repositoryName: "swift",
-        repository: MockGithubRepoRepository()
-    )
+    NavigationStack {
+        IssueListView(
+            ownerLogin: "apple",
+            repositoryName: "swift",
+            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            repository: MockGithubRepoRepository()
+        )
+    }
     .environment(BookmarkStore(items: []))
 }
 
 #Preview("Empty") {
-    IssueListView(
-        ownerLogin: "apple",
-        repositoryName: "swift",
-        repository: MockGithubRepoRepository(issuesResult: .success([]))
-    )
+    NavigationStack {
+        IssueListView(
+            ownerLogin: "apple",
+            repositoryName: "swift",
+            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            repository: MockGithubRepoRepository(issuesResult: .success([]))
+        )
+    }
     .environment(BookmarkStore(items: []))
 }
 
 #Preview("Error") {
-    IssueListView(
-        ownerLogin: "apple",
-        repositoryName: "swift",
-        repository: MockGithubRepoRepository(
-            issuesResult: .failure(URLError(.notConnectedToInternet))
+    NavigationStack {
+        IssueListView(
+            ownerLogin: "apple",
+            repositoryName: "swift",
+            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            repository: MockGithubRepoRepository(
+                issuesResult: .failure(URLError(.notConnectedToInternet))
+            )
         )
-    )
+    }
     .environment(BookmarkStore(items: []))
 }

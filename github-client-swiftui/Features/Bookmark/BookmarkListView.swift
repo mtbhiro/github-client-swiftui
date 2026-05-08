@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct BookmarkListView: View {
+    @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var store
-    @State private var path: [BookmarkRoute] = []
     @State private var filter: BookmarkFilter = .repository
     @State private var expandedCounts: [String: Int] = [:]
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var coordinator = coordinator
+        NavigationStack(path: $coordinator.bookmarksPath) {
             VStack(spacing: 0) {
                 filterPicker
                     .padding(.horizontal, 16)
@@ -28,12 +29,28 @@ struct BookmarkListView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("ブックマーク")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: BookmarkRoute.self) { route in
+            .navigationDestination(for: BookmarksRoute.self) { route in
                 switch route {
                 case let .repositoryDetail(ownerLogin, repositoryName):
                     RepositoryDetailView(
                         ownerLogin: ownerLogin,
-                        repositoryName: repositoryName
+                        repositoryName: repositoryName,
+                        issueListRoute: BookmarksRoute.issueList(
+                            ownerLogin: ownerLogin,
+                            repositoryName: repositoryName
+                        )
+                    )
+                case let .issueList(ownerLogin, repositoryName):
+                    IssueListView(
+                        ownerLogin: ownerLogin,
+                        repositoryName: repositoryName,
+                        issueDetailRoute: { number in
+                            BookmarksRoute.issueDetail(
+                                ownerLogin: ownerLogin,
+                                repositoryName: repositoryName,
+                                number: number
+                            )
+                        }
                     )
                 case let .issueDetail(ownerLogin, repositoryName, number):
                     IssueDetailView(
@@ -65,7 +82,7 @@ struct BookmarkListView: View {
             List {
                 ForEach(repos) { item in
                     if case let .repository(repo) = item {
-                        NavigationLink(value: BookmarkRoute.repositoryDetail(
+                        NavigationLink(value: BookmarksRoute.repositoryDetail(
                             ownerLogin: repo.ownerLogin,
                             repositoryName: repo.repositoryName
                         )) {
@@ -140,7 +157,7 @@ struct BookmarkListView: View {
 
         return Section {
             ForEach(visibleIssues, id: \.number) { issue in
-                NavigationLink(value: BookmarkRoute.issueDetail(
+                NavigationLink(value: BookmarksRoute.issueDetail(
                     ownerLogin: issue.ownerLogin,
                     repositoryName: issue.repositoryName,
                     number: issue.number
@@ -185,7 +202,7 @@ struct BookmarkListView: View {
                 .buttonStyle(.plain)
             }
         } header: {
-            NavigationLink(value: BookmarkRoute.repositoryDetail(
+            NavigationLink(value: BookmarksRoute.repositoryDetail(
                 ownerLogin: group.ownerLogin,
                 repositoryName: group.repositoryName
             )) {
@@ -296,11 +313,13 @@ private struct IssueGroup {
 
 #Preview("Empty") {
     BookmarkListView()
+        .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
 }
 
 #Preview("Repositories") {
     BookmarkListView()
+        .environment(AppCoordinator())
         .environment(BookmarkStore(items: [
             .repository(RepositoryBookmark(
                 ownerLogin: "apple",
@@ -325,6 +344,7 @@ private struct IssueGroup {
 
 #Preview("Issues Grouped") {
     BookmarkListView()
+        .environment(AppCoordinator())
         .environment(BookmarkStore(items: [
             .issue(IssueBookmark(
                 ownerLogin: "apple",

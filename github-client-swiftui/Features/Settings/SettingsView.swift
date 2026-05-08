@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(AppCoordinator.self) private var coordinator
+
     var body: some View {
-        NavigationStack {
+        @Bindable var coordinator = coordinator
+        NavigationStack(path: $coordinator.settingsPath) {
             VStack {
                 Spacer()
                 Text("設定")
@@ -18,4 +21,5 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(AppCoordinator())
 }
