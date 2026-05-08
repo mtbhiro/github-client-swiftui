@@ -17,8 +17,24 @@ struct RepositorySearchView: View {
 
                 Divider()
 
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    switch model.phase {
+                    case .idle:
+                        idlePlaceholder
+                    case .loading:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    case let .loaded(state):
+                        if state.repositories.isEmpty {
+                            emptyView
+                        } else {
+                            repositoryList(state)
+                        }
+                    case let .error(message):
+                        errorView(message: message)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("リポジトリ検索")
@@ -54,7 +70,6 @@ struct RepositorySearchView: View {
                     )
                 }
             }
-            .onAppear { model.onAppear() }
             .onDisappear { model.onDisappear() }
         }
     }
@@ -105,25 +120,6 @@ struct RepositorySearchView: View {
         .animation(.easeInOut(duration: 0.15), value: isQueryFieldFocused)
     }
 
-    @ViewBuilder
-    private var content: some View {
-        switch model.phase {
-        case .idle:
-            idlePlaceholder
-        case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case let .loaded(isEmpty):
-            if isEmpty {
-                emptyView
-            } else {
-                repositoryList
-            }
-        case let .error(message):
-            errorView(message: message)
-        }
-    }
-
     private var idlePlaceholder: some View {
         VStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
@@ -148,15 +144,15 @@ struct RepositorySearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var repositoryList: some View {
+    private func repositoryList(_ state: LoadedRepositories) -> some View {
         List {
-            ForEach(model.repositories) { repo in
+            ForEach(state.repositories) { repo in
                 repositoryRow(repo)
             }
 
-            if model.hasMorePages {
+            if state.hasMorePages {
                 ProgressView()
-                    .id(model.repositories.count)
+                    .id(state.repositories.count)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowSeparator(.hidden)
                     .onAppear { model.loadNextPageIfNeeded() }

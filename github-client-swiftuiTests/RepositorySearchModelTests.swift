@@ -23,7 +23,6 @@ struct RepositorySearchModelTests {
         let (model, _) = makeSUT()
         #expect(model.query == "")
         #expect(model.phase == .idle)
-        #expect(model.repositories.isEmpty)
     }
 
     @Test func settingEmptyQuery_remainsIdle() {
@@ -44,7 +43,6 @@ struct RepositorySearchModelTests {
         model.clearQuery()
         #expect(model.query == "")
         #expect(model.phase == .idle)
-        #expect(model.repositories.isEmpty)
     }
 
     @Test func onSubmit_transitionsToLoading() {
@@ -74,11 +72,14 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.phase == .loaded(isEmpty: false))
-        #expect(model.repositories == GitHubRepo.samples)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.repositories == GitHubRepo.samples)
         #expect(mock.lastQuery == "swift")
         #expect(mock.lastPage == 1)
-        #expect(model.hasMorePages == false)
+        #expect(state.hasMorePages == false)
     }
 
     @Test func search_emptyResult_loadsEmpty() async throws {
@@ -86,8 +87,11 @@ struct RepositorySearchModelTests {
         model.query = "nonexistent"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.phase == .loaded(isEmpty: true))
-        #expect(model.repositories.isEmpty)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.repositories.isEmpty)
     }
 
     @Test func search_failure_showsError() async throws {
@@ -131,8 +135,12 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.hasMorePages == true)
-        #expect(model.repositories.count == 30)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.hasMorePages == true)
+        #expect(state.repositories.count == 30)
     }
 
     @Test func loadNextPageIfNeeded_loadsNextPage() async throws {
@@ -142,16 +150,19 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.hasMorePages == true)
 
         mock.searchResult = .success(page2)
         model.loadNextPageIfNeeded()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(model.repositories.count == 40)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.repositories.count == 40)
         #expect(mock.lastPage == 2)
-        #expect(model.hasMorePages == false)
-        #expect(model.isLoadingMore == false)
+        #expect(state.hasMorePages == false)
+        #expect(state.isLoadingMore == false)
     }
 
     @Test func loadNextPageIfNeeded_doesNothingWhenNoMorePages() async throws {
@@ -159,7 +170,6 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.hasMorePages == false)
 
         let callCountBefore = mock.searchCallCount
         model.loadNextPageIfNeeded()
@@ -190,7 +200,6 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
-        #expect(model.hasMorePages == true)
 
         let newPage1 = makeRepos(count: 5, startId: 100)
         mock.searchResult = .success(newPage1)
@@ -198,8 +207,12 @@ struct RepositorySearchModelTests {
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(model.repositories.count == 5)
-        #expect(model.hasMorePages == false)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.repositories.count == 5)
+        #expect(state.hasMorePages == false)
         #expect(mock.lastPage == 1)
     }
 
@@ -214,9 +227,12 @@ struct RepositorySearchModelTests {
         model.loadNextPageIfNeeded()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(model.repositories.count == 30)
-        #expect(model.phase == .loaded(isEmpty: false))
-        #expect(model.isLoadingMore == false)
+        guard case let .loaded(state) = model.phase else {
+            Issue.record("Expected loaded phase")
+            return
+        }
+        #expect(state.repositories.count == 30)
+        #expect(state.isLoadingMore == false)
     }
 
     private func makeRepos(count: Int, startId: Int = 1) -> [GitHubRepo] {

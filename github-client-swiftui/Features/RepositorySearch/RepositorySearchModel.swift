@@ -1,10 +1,18 @@
 import Foundation
 import Observation
 
+struct LoadedRepositories: Sendable, Equatable {
+    let query: String
+    var repositories: [GitHubRepo]
+    var currentPage: Int
+    var hasMorePages: Bool
+    var isLoadingMore: Bool = false
+}
+
 enum RepositorySearchPhase: Sendable, Equatable {
     case idle
     case loading
-    case loaded(isEmpty: Bool)
+    case loaded(LoadedRepositories)
     case error(message: String)
 
     var isLoaded: Bool {
@@ -23,15 +31,9 @@ final class RepositorySearchModel {
     }
 
     private(set) var phase: RepositorySearchPhase = .idle
-    private(set) var repositories: [GitHubRepo] = []
-    private(set) var isLoadingMore: Bool = false
-    private(set) var hasMorePages: Bool = false
 
     private static let perPage = 30
-    private var currentPage: Int = 1
-    private var searchTask: Task<Void, Never>?
-    private var loadMoreTask: Task<Void, Never>?
-    private var lastSearchedQuery: String = ""
+    private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
     private let debounceDuration: Duration
 
@@ -43,11 +45,8 @@ final class RepositorySearchModel {
         self.debounceDuration = debounceDuration
     }
 
-    func onAppear() {}
-
     func onDisappear() {
-        cancelSearch()
-        cancelLoadMore()
+        cancelCurrentTask()
     }
 
     func onSubmit() {
@@ -63,19 +62,19 @@ final class RepositorySearchModel {
     }
 
     func refresh() async {
-        cancelSearch()
-        cancelLoadMore()
+        cancelCurrentTask()
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
         do {
             let results = try await repository.searchRepositories(query: trimmed, page: 1)
-            repositories = results
-            currentPage = 1
-            hasMorePages = results.count >= Self.perPage
-            lastSearchedQuery = trimmed
-            phase = .loaded(isEmpty: results.isEmpty)
+            phase = .loaded(LoadedRepositories(
+                query: trimmed,
+                repositories: results,
+                currentPage: 1,
+                hasMorePages: results.count >= Self.perPage
+            ))
         } catch is CancellationError {
         } catch {
             phase = .error(message: error.localizedDescription)
@@ -83,25 +82,31 @@ final class RepositorySearchModel {
     }
 
     func loadNextPageIfNeeded() {
-        guard hasMorePages, !isLoadingMore, phase.isLoaded else { return }
+        guard case var .loaded(state) = phase, state.hasMorePages, !state.isLoadingMore else { return }
 
-        let query = lastSearchedQuery
-        let nextPage = currentPage + 1
+        let query = state.query
+        let nextPage = state.currentPage + 1
 
-        isLoadingMore = true
-        loadMoreTask = Task { [weak self] in
+        state.isLoadingMore = true
+        phase = .loaded(state)
+
+        currentTask = Task { [weak self] in
             do {
                 let results = try await self?.repository.searchRepositories(query: query, page: nextPage) ?? []
                 try Task.checkCancellation()
-                guard let self else { return }
-                self.repositories.append(contentsOf: results)
-                self.currentPage = nextPage
-                self.hasMorePages = results.count >= Self.perPage
+                guard let self, case let .loaded(state) = self.phase else { return }
+                self.phase = .loaded(LoadedRepositories(
+                    query: state.query,
+                    repositories: state.repositories + results,
+                    currentPage: nextPage,
+                    hasMorePages: results.count >= Self.perPage
+                ))
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled, case var .loaded(state) = self.phase else { return }
+                state.isLoadingMore = false
+                self.phase = .loaded(state)
             }
-            self?.isLoadingMore = false
         }
     }
 
@@ -110,8 +115,7 @@ final class RepositorySearchModel {
     }
 
     private func startSearch(debounce: Bool) {
-        cancelSearch()
-        cancelLoadMore()
+        cancelCurrentTask()
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -127,13 +131,13 @@ final class RepositorySearchModel {
     }
 
     private func startImmediateSearch(query: String) {
-        guard query != lastSearchedQuery || !phase.isLoaded else { return }
+        if case let .loaded(state) = phase, state.query == query { return }
         phase = .loading
         executeSearch(query: query, debounce: false)
     }
 
     private func startDebouncedSearch(query: String) {
-        if repositories.isEmpty {
+        if !phase.isLoaded {
             phase = .loading
         }
         executeSearch(query: query, debounce: true)
@@ -141,7 +145,7 @@ final class RepositorySearchModel {
 
     private func executeSearch(query: String, debounce: Bool) {
         let duration = debounceDuration
-        searchTask = Task { [weak self] in
+        currentTask = Task { [weak self] in
             do {
                 if debounce {
                     try await Task.sleep(for: duration)
@@ -153,11 +157,12 @@ final class RepositorySearchModel {
                 let results = try await self?.repository.searchRepositories(query: query, page: 1) ?? []
                 try Task.checkCancellation()
                 guard let self else { return }
-                self.repositories = results
-                self.currentPage = 1
-                self.hasMorePages = results.count >= Self.perPage
-                self.lastSearchedQuery = query
-                self.phase = .loaded(isEmpty: results.isEmpty)
+                self.phase = .loaded(LoadedRepositories(
+                    query: query,
+                    repositories: results,
+                    currentPage: 1,
+                    hasMorePages: results.count >= Self.perPage
+                ))
             } catch is CancellationError {
             } catch {
                 guard let self, !Task.isCancelled else { return }
@@ -168,21 +173,11 @@ final class RepositorySearchModel {
 
     private func resetToIdle() {
         phase = .idle
-        repositories = []
-        lastSearchedQuery = ""
-        currentPage = 1
-        hasMorePages = false
     }
 
-    private func cancelSearch() {
-        searchTask?.cancel()
-        searchTask = nil
-    }
-
-    private func cancelLoadMore() {
-        loadMoreTask?.cancel()
-        loadMoreTask = nil
-        isLoadingMore = false
+    private func cancelCurrentTask() {
+        currentTask?.cancel()
+        currentTask = nil
     }
 
 }
