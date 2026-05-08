@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 @Observable
 final class RepositoryDetailModel {
     private(set) var phase: Phase = .loading

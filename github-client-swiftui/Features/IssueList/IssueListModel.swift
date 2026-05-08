@@ -11,7 +11,6 @@ enum IssueListPhase: Sendable, Equatable {
     }
 }
 
-@MainActor
 @Observable
 final class IssueListModel {
     private(set) var phase: IssueListPhase = .loading

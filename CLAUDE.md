@@ -5,7 +5,7 @@
 - Swift 6 を使用し、strict concurrency を遵守する。
 - 実装時は `github-client-swiftui/docs/requirements.md` の要求定義を前提にする。
 - 状態管理には SwiftUI Observation の `@Observable` を使用し、`ObservableObject` / `@Published` は原則として採用しない。
-- UI 状態を持つ Observable Model は原則として `@MainActor` に隔離する。
+- `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` を設定済みのため、モジュール内の型・関数はデフォルトで `@MainActor` に隔離される。明示的な `@MainActor` 付与は不要。バックグラウンド実行が必要な箇所には `nonisolated` を付与する。
 - アーキテクチャは View / Observable Model / Repository / API Client の分離を基本にする。
 - ナビゲーションは `NavigationStack` のデータ駆動ナビゲーションを基本にし、`NavigationLink(value:)` と `.navigationDestination(for:)` を使用する。`NavigationView` は使用しない。
 - 遷移状態は `Hashable` な typed route の配列で保持し、route には画面構築に必要な最小限の識別子だけを持たせる。

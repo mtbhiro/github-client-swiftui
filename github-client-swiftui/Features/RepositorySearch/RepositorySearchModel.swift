@@ -13,7 +13,6 @@ enum RepositorySearchPhase: Sendable, Equatable {
     }
 }
 
-@MainActor
 @Observable
 final class RepositorySearchModel {
     var query: String = "" {

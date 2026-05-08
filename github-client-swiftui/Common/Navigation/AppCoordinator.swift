@@ -7,7 +7,6 @@ enum RootTab: Hashable {
     case settings
 }
 
-@MainActor
 @Observable
 final class AppCoordinator {
     var selectedTab: RootTab = .search
