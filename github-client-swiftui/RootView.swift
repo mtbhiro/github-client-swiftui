@@ -2,7 +2,7 @@ import SwiftUI
 
 enum RootTab: Hashable {
     case search
-    case myPage
+    case bookmarks
     case settings
 }
 
@@ -17,11 +17,11 @@ struct RootView: View {
                 }
                 .tag(RootTab.search)
 
-            MyPageView()
+            BookmarkListView()
                 .tabItem {
-                    Label("マイページ", systemImage: "person.crop.circle")
+                    Label("ブックマーク", systemImage: "bookmark")
                 }
-                .tag(RootTab.myPage)
+                .tag(RootTab.bookmarks)
 
             SettingsView()
                 .tabItem {
@@ -34,4 +34,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
+        .environment(BookmarkStore(items: []))
 }

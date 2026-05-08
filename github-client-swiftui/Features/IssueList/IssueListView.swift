@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct IssueListView: View {
+    @Environment(BookmarkStore.self) private var bookmarkStore
     @State private var model: IssueListModel
     @State private var path: [IssueListRoute] = []
 
@@ -74,9 +75,7 @@ struct IssueListView: View {
     private var issueList: some View {
         List {
             ForEach(model.issues) { issue in
-                NavigationLink(value: IssueListRoute.issueDetail(number: issue.number)) {
-                    IssueRow(issue: issue)
-                }
+                issueRow(issue)
             }
 
             if model.hasMorePages {
@@ -89,6 +88,27 @@ struct IssueListView: View {
         }
         .listStyle(.plain)
         .refreshable { await model.refresh() }
+    }
+
+    private func issueRow(_ issue: GitHubIssue) -> some View {
+        let item = BookmarkItem.issue(IssueBookmark(
+            ownerLogin: model.ownerLogin,
+            repositoryName: model.repositoryName,
+            number: issue.number,
+            title: issue.title,
+            state: issue.state,
+            isPullRequest: issue.isPullRequest,
+            createdAt: Date()
+        ))
+        return NavigationLink(value: IssueListRoute.issueDetail(number: issue.number)) {
+            HStack {
+                IssueRow(issue: issue)
+                Spacer()
+                BookmarkButton(isBookmarked: bookmarkStore.contains(item)) {
+                    bookmarkStore.toggle(item)
+                }
+            }
+        }
     }
 
     private func errorView(message: String) -> some View {
@@ -120,6 +140,7 @@ enum IssueListRoute: Hashable {
         repositoryName: "swift",
         repository: MockGithubRepoRepository()
     )
+    .environment(BookmarkStore(items: []))
 }
 
 #Preview("Empty") {
@@ -128,6 +149,7 @@ enum IssueListRoute: Hashable {
         repositoryName: "swift",
         repository: MockGithubRepoRepository(issuesResult: .success([]))
     )
+    .environment(BookmarkStore(items: []))
 }
 
 #Preview("Error") {
@@ -138,4 +160,5 @@ enum IssueListRoute: Hashable {
             issuesResult: .failure(URLError(.notConnectedToInternet))
         )
     )
+    .environment(BookmarkStore(items: []))
 }

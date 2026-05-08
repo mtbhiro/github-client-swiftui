@@ -12,7 +12,7 @@ nonisolated struct GitHubIssue: Sendable, Identifiable, Hashable {
     let isPullRequest: Bool
 }
 
-nonisolated enum IssueState: String, Sendable, Hashable {
+nonisolated enum IssueState: String, Sendable, Hashable, Codable {
     case open
     case closed
 }

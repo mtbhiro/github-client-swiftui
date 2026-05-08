@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RepositorySearchView: View {
+    @Environment(BookmarkStore.self) private var bookmarkStore
     @State private var model = RepositorySearchModel()
     @State private var path: [RepositorySearchRoute] = []
     @FocusState private var isQueryFieldFocused: Bool
@@ -127,12 +128,7 @@ struct RepositorySearchView: View {
     private var repositoryList: some View {
         List {
             ForEach(model.repositories) { repo in
-                NavigationLink(value: RepositorySearchRoute.repositoryDetail(
-                    ownerLogin: repo.owner.login,
-                    repositoryName: repo.name
-                )) {
-                    RepositoryRow(repository: repo)
-                }
+                repositoryRow(repo)
             }
 
             if model.hasMorePages {
@@ -146,6 +142,30 @@ struct RepositorySearchView: View {
         .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
         .refreshable { await model.refresh() }
+    }
+
+    private func repositoryRow(_ repo: GitHubRepo) -> some View {
+        let item = BookmarkItem.repository(RepositoryBookmark(
+            ownerLogin: repo.owner.login,
+            repositoryName: repo.name,
+            fullName: repo.fullName,
+            description: repo.description,
+            stargazersCount: repo.stargazersCount,
+            language: repo.language,
+            createdAt: Date()
+        ))
+        return NavigationLink(value: RepositorySearchRoute.repositoryDetail(
+            ownerLogin: repo.owner.login,
+            repositoryName: repo.name
+        )) {
+            HStack {
+                RepositoryRow(repository: repo)
+                Spacer()
+                BookmarkButton(isBookmarked: bookmarkStore.contains(item)) {
+                    bookmarkStore.toggle(item)
+                }
+            }
+        }
     }
 
     private func errorView(message: String) -> some View {
@@ -169,4 +189,5 @@ struct RepositorySearchView: View {
 
 #Preview {
     RepositorySearchView()
+        .environment(BookmarkStore(items: []))
 }
