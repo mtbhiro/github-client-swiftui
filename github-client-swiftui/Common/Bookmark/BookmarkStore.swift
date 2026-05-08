@@ -4,20 +4,17 @@ import Observation
 @MainActor
 @Observable
 final class BookmarkStore {
-    private static let userDefaultsKey = "bookmarkItems"
-    private let defaults: UserDefaults?
+    private let storage: UserDefaultsStorage<[BookmarkItem]>?
 
     private(set) var items: [BookmarkItem] = []
 
     init(defaults: UserDefaults? = .standard) {
-        self.defaults = defaults
-        if let defaults {
-            self.items = Self.load(from: defaults)
-        }
+        self.storage = defaults.map { UserDefaultsStorage(key: "bookmarkItems", defaults: $0) }
+        self.items = storage?.load() ?? []
     }
 
     init(items: [BookmarkItem]) {
-        self.defaults = nil
+        self.storage = nil
         self.items = items
     }
 
@@ -53,13 +50,6 @@ final class BookmarkStore {
     }
 
     private func save() {
-        guard let defaults else { return }
-        guard let data = try? JSONEncoder().encode(items) else { return }
-        defaults.set(data, forKey: Self.userDefaultsKey)
-    }
-
-    private static func load(from defaults: UserDefaults) -> [BookmarkItem] {
-        guard let data = defaults.data(forKey: userDefaultsKey) else { return [] }
-        return (try? JSONDecoder().decode([BookmarkItem].self, from: data)) ?? []
+        storage?.save(items)
     }
 }
