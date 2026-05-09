@@ -23,11 +23,11 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
             case .loading:
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            case let .loaded(isEmpty):
-                if isEmpty {
+            case let .loaded(state):
+                if state.issues.isEmpty {
                     emptyView
                 } else {
-                    issueList
+                    issueList(state)
                 }
             case let .error(message):
                 errorView(message: message)
@@ -51,15 +51,15 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var issueList: some View {
+    private func issueList(_ state: LoadedIssues) -> some View {
         List {
-            ForEach(model.issues) { issue in
+            ForEach(state.issues) { issue in
                 issueRow(issue)
             }
 
-            if model.hasMorePages {
+            if state.hasMorePages {
                 ProgressView()
-                    .id(model.issues.count)
+                    .id(state.issues.count)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowSeparator(.hidden)
                     .onAppear { model.loadNextPageIfNeeded() }

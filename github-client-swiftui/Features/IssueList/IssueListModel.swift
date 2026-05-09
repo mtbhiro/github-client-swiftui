@@ -1,8 +1,16 @@
 import Foundation
+import Observation
+
+struct LoadedIssues: Sendable, Equatable {
+    var issues: [GitHubIssue]
+    var currentPage: Int
+    var hasMorePages: Bool
+    var isLoadingMore: Bool = false
+}
 
 enum IssueListPhase: Sendable, Equatable {
     case loading
-    case loaded(isEmpty: Bool)
+    case loaded(LoadedIssues)
     case error(message: String)
 
     var isLoaded: Bool {
@@ -14,16 +22,11 @@ enum IssueListPhase: Sendable, Equatable {
 @Observable
 final class IssueListModel {
     private(set) var phase: IssueListPhase = .loading
-    private(set) var issues: [GitHubIssue] = []
-    private(set) var isLoadingMore: Bool = false
-    private(set) var hasMorePages: Bool = false
 
     let fullName: GitHubRepoFullName
 
     private static let perPage = 30
-    private var currentPage: Int = 1
-    private var loadTask: Task<Void, Never>?
-    private var loadMoreTask: Task<Void, Never>?
+    private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
 
     init(
@@ -35,15 +38,12 @@ final class IssueListModel {
     }
 
     func onAppear() {
-        guard case .loading = phase else { return }
+        guard case .loading = phase, currentTask == nil else { return }
         load()
     }
 
     func onDisappear() {
-        loadTask?.cancel()
-        loadTask = nil
-        loadMoreTask?.cancel()
-        loadMoreTask = nil
+        cancelCurrentTask()
     }
 
     func retry() {
@@ -52,17 +52,15 @@ final class IssueListModel {
     }
 
     func refresh() async {
-        loadTask?.cancel()
-        loadTask = nil
-        loadMoreTask?.cancel()
-        loadMoreTask = nil
+        cancelCurrentTask()
 
         do {
             let results = try await repository.fetchIssues(fullName: fullName, page: 1)
-            issues = results
-            currentPage = 1
-            hasMorePages = results.count >= Self.perPage
-            phase = .loaded(isEmpty: results.isEmpty)
+            phase = .loaded(LoadedIssues(
+                issues: results,
+                currentPage: 1,
+                hasMorePages: results.count >= Self.perPage
+            ))
         } catch is CancellationError {
         } catch {
             phase = .error(message: "Issue の取得に失敗しました")
@@ -70,43 +68,54 @@ final class IssueListModel {
     }
 
     func loadNextPageIfNeeded() {
-        guard hasMorePages, !isLoadingMore, phase.isLoaded else { return }
+        guard case var .loaded(state) = phase, state.hasMorePages, !state.isLoadingMore else { return }
 
-        let nextPage = currentPage + 1
-        isLoadingMore = true
-        loadMoreTask = Task { [weak self] in
-            guard let self else { return }
+        let fullName = self.fullName
+        let nextPage = state.currentPage + 1
+
+        state.isLoadingMore = true
+        phase = .loaded(state)
+
+        currentTask = Task { [weak self] in
             do {
-                let results = try await self.repository.fetchIssues(
-                    fullName: self.fullName,
-                    page: nextPage
-                )
-                self.issues.append(contentsOf: results)
-                self.currentPage = nextPage
-                self.hasMorePages = results.count >= Self.perPage
+                let results = try await self?.repository.fetchIssues(fullName: fullName, page: nextPage) ?? []
+                guard let self, case let .loaded(state) = self.phase else { return }
+                self.phase = .loaded(LoadedIssues(
+                    issues: state.issues + results,
+                    currentPage: nextPage,
+                    hasMorePages: results.count >= Self.perPage
+                ))
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled, case var .loaded(state) = self.phase else { return }
+                state.isLoadingMore = false
+                self.phase = .loaded(state)
             }
-            self.isLoadingMore = false
         }
     }
 
     private func load() {
-        loadTask?.cancel()
-        loadTask = Task {
+        cancelCurrentTask()
+        let fullName = self.fullName
+        currentTask = Task { [weak self] in
             do {
-                let results = try await repository.fetchIssues(fullName: fullName, page: 1)
-                guard !Task.isCancelled else { return }
-                issues = results
-                currentPage = 1
-                hasMorePages = results.count >= Self.perPage
-                phase = .loaded(isEmpty: results.isEmpty)
+                let results = try await self?.repository.fetchIssues(fullName: fullName, page: 1) ?? []
+                guard let self else { return }
+                self.phase = .loaded(LoadedIssues(
+                    issues: results,
+                    currentPage: 1,
+                    hasMorePages: results.count >= Self.perPage
+                ))
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
-                phase = .error(message: "Issue の取得に失敗しました")
+                guard let self, !Task.isCancelled else { return }
+                self.phase = .error(message: "Issue の取得に失敗しました")
             }
         }
+    }
+
+    private func cancelCurrentTask() {
+        currentTask?.cancel()
+        currentTask = nil
     }
 }
