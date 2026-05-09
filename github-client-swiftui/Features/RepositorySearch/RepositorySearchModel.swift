@@ -93,7 +93,6 @@ final class RepositorySearchModel {
         currentTask = Task { [weak self] in
             do {
                 let results = try await self?.repository.searchRepositories(query: query, page: nextPage) ?? []
-                try Task.checkCancellation()
                 guard let self, case let .loaded(state) = self.phase else { return }
                 self.phase = .loaded(LoadedRepositories(
                     query: state.query,
@@ -155,7 +154,6 @@ final class RepositorySearchModel {
                     guard self != nil else { return }
                 }
                 let results = try await self?.repository.searchRepositories(query: query, page: 1) ?? []
-                try Task.checkCancellation()
                 guard let self else { return }
                 self.phase = .loaded(LoadedRepositories(
                     query: query,

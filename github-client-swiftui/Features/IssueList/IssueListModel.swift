@@ -86,7 +86,6 @@ final class IssueListModel {
                     repo: self?.repositoryName ?? "",
                     page: nextPage
                 ) ?? []
-                try Task.checkCancellation()
                 guard let self else { return }
                 self.issues.append(contentsOf: results)
                 self.currentPage = nextPage

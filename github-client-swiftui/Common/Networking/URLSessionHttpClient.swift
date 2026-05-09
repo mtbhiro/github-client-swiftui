@@ -20,16 +20,12 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: urlRequest)
-        } catch is CancellationError {
-            throw CancellationError()
         } catch let error as URLError {
             if error.code == .cancelled {
                 throw CancellationError()
             }
             throw HttpClientError.networkError(error)
         }
-
-        try Task.checkCancellation()
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw HttpClientError.networkError(URLError(.badServerResponse))
