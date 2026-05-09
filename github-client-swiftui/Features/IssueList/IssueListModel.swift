@@ -70,7 +70,6 @@ final class IssueListModel {
     func loadNextPageIfNeeded() {
         guard case var .loaded(state) = phase, state.hasMorePages, !state.isLoadingMore else { return }
 
-        let fullName = self.fullName
         let nextPage = state.currentPage + 1
 
         state.isLoadingMore = true
@@ -78,8 +77,9 @@ final class IssueListModel {
 
         currentTask = Task { [weak self] in
             do {
-                let results = try await self?.repository.fetchIssues(fullName: fullName, page: nextPage) ?? []
-                guard let self, case let .loaded(state) = self.phase else { return }
+                guard let self else { return }
+                let results = try await self.repository.fetchIssues(fullName: self.fullName, page: nextPage)
+                guard case let .loaded(state) = self.phase else { return }
                 self.phase = .loaded(LoadedIssues(
                     issues: state.issues + results,
                     currentPage: nextPage,
@@ -96,11 +96,10 @@ final class IssueListModel {
 
     private func load() {
         cancelCurrentTask()
-        let fullName = self.fullName
         currentTask = Task { [weak self] in
             do {
-                let results = try await self?.repository.fetchIssues(fullName: fullName, page: 1) ?? []
                 guard let self else { return }
+                let results = try await self.repository.fetchIssues(fullName: self.fullName, page: 1)
                 self.phase = .loaded(LoadedIssues(
                     issues: results,
                     currentPage: 1,
