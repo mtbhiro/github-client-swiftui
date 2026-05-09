@@ -70,6 +70,7 @@ final class IssueDetailModel {
                 guard !Task.isCancelled else { return }
                 phase = .loaded(detail)
                 loadComments()
+            } catch is CancellationError {
             } catch {
                 guard !Task.isCancelled else { return }
                 phase = .error("Issue の取得に失敗しました")
@@ -88,6 +89,7 @@ final class IssueDetailModel {
                 guard !Task.isCancelled else { return }
                 comments = result
                 commentsPhase = .loaded
+            } catch is CancellationError {
             } catch {
                 guard !Task.isCancelled else { return }
                 commentsPhase = .error("コメントの取得に失敗しました")

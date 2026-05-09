@@ -29,14 +29,14 @@ final class RepositoryDetailModel {
         load()
     }
 
-    func retry() {
-        phase = .loading
-        load()
-    }
-
     func onDisappear() {
         loadTask?.cancel()
         loadTask = nil
+    }
+
+    func retry() {
+        phase = .loading
+        load()
     }
 
     private func load() {
@@ -49,6 +49,7 @@ final class RepositoryDetailModel {
                 )
                 guard !Task.isCancelled else { return }
                 phase = .loaded(repo)
+            } catch is CancellationError {
             } catch {
                 guard !Task.isCancelled else { return }
                 phase = .error("リポジトリの取得に失敗しました")

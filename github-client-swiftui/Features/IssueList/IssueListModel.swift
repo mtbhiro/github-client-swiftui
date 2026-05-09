@@ -80,13 +80,13 @@ final class IssueListModel {
         let nextPage = currentPage + 1
         isLoadingMore = true
         loadMoreTask = Task { [weak self] in
+            guard let self else { return }
             do {
-                let results = try await self?.repository.fetchIssues(
-                    owner: self?.ownerLogin ?? "",
-                    repo: self?.repositoryName ?? "",
+                let results = try await self.repository.fetchIssues(
+                    owner: self.ownerLogin,
+                    repo: self.repositoryName,
                     page: nextPage
-                ) ?? []
-                guard let self else { return }
+                )
                 self.issues.append(contentsOf: results)
                 self.currentPage = nextPage
                 self.hasMorePages = results.count >= Self.perPage
@@ -94,7 +94,7 @@ final class IssueListModel {
             } catch {
                 guard !Task.isCancelled else { return }
             }
-            self?.isLoadingMore = false
+            self.isLoadingMore = false
         }
     }
 
@@ -110,6 +110,7 @@ final class IssueListModel {
                 currentPage = 1
                 hasMorePages = results.count >= Self.perPage
                 phase = .loaded(isEmpty: results.isEmpty)
+            } catch is CancellationError {
             } catch {
                 guard !Task.isCancelled else { return }
                 phase = .error(message: "Issue の取得に失敗しました")
