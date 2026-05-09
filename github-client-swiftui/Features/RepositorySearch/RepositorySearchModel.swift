@@ -102,7 +102,7 @@ final class RepositorySearchModel {
                 ))
             } catch is CancellationError {
             } catch {
-                guard let self, !Task.isCancelled, case var .loaded(state) = self.phase else { return }
+                guard let self, case var .loaded(state) = self.phase else { return }
                 state.isLoadingMore = false
                 self.phase = .loaded(state)
             }
@@ -163,7 +163,7 @@ final class RepositorySearchModel {
                 ))
             } catch is CancellationError {
             } catch {
-                guard let self, !Task.isCancelled else { return }
+                guard let self else { return }
                 self.phase = .error(message: error.localizedDescription)
             }
         }

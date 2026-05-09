@@ -41,11 +41,9 @@ final class RepositoryDetailModel {
         loadTask = Task {
             do {
                 let repo = try await repository.fetchRepository(fullName: fullName)
-                guard !Task.isCancelled else { return }
                 phase = .loaded(repo)
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
                 phase = .error("リポジトリの取得に失敗しました")
             }
         }

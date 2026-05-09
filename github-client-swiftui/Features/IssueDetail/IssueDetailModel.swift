@@ -64,12 +64,10 @@ final class IssueDetailModel {
                 let detail = try await repository.fetchIssueDetail(
                     fullName: fullName, number: issueNumber
                 )
-                guard !Task.isCancelled else { return }
                 phase = .loaded(detail)
                 loadComments()
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
                 phase = .error("Issue の取得に失敗しました")
             }
         }
@@ -83,12 +81,10 @@ final class IssueDetailModel {
                 let result = try await repository.fetchIssueComments(
                     fullName: fullName, number: issueNumber, page: 1
                 )
-                guard !Task.isCancelled else { return }
                 comments = result
                 commentsPhase = .loaded
             } catch is CancellationError {
             } catch {
-                guard !Task.isCancelled else { return }
                 commentsPhase = .error("コメントの取得に失敗しました")
             }
         }
