@@ -27,9 +27,8 @@ struct GitHubRepoDTOTests {
 
         let repo = repoDTO.toDomain()
 
-        #expect(repo.id == 44838949)
-        #expect(repo.name == "swift")
-        #expect(repo.fullName == "apple/swift")
+        #expect(repo.fullName == GitHubRepoFullName(ownerLogin: "apple", name: "swift"))
+        #expect(String(describing: repo.fullName) == "apple/swift")
         #expect(repo.owner.login == "apple")
         #expect(repo.owner.id == 10639145)
         #expect(repo.owner.avatarUrl?.absoluteString == "https://avatars.githubusercontent.com/u/10639145?v=4")
@@ -99,8 +98,8 @@ struct GitHubRepoDTOTests {
         let repos = response.toDomain()
 
         #expect(repos.count == 2)
-        #expect(repos[0].name == "repo1")
-        #expect(repos[1].name == "repo2")
+        #expect(repos[0].fullName.name == "repo1")
+        #expect(repos[1].fullName.name == "repo2")
         #expect(repos[1].topics.isEmpty)
     }
 

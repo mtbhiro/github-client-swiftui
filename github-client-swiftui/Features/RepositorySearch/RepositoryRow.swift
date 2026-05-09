@@ -5,7 +5,7 @@ struct RepositoryRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(repository.fullName)
+            Text(verbatim: String(describing: repository.fullName))
                 .font(.headline)
                 .lineLimit(1)
 

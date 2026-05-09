@@ -41,31 +41,21 @@ struct RepositorySearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: SearchRoute.self) { route in
                 switch route {
-                case let .repositoryDetail(ownerLogin, repositoryName):
+                case let .repositoryDetail(fullName):
                     RepositoryDetailView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
-                        issueListRoute: SearchRoute.issueList(
-                            ownerLogin: ownerLogin,
-                            repositoryName: repositoryName
-                        )
+                        fullName: fullName,
+                        issueListRoute: SearchRoute.issueList(fullName)
                     )
-                case let .issueList(ownerLogin, repositoryName):
+                case let .issueList(fullName):
                     IssueListView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
+                        fullName: fullName,
                         issueDetailRoute: { number in
-                            SearchRoute.issueDetail(
-                                ownerLogin: ownerLogin,
-                                repositoryName: repositoryName,
-                                number: number
-                            )
+                            SearchRoute.issueDetail(fullName, number: number)
                         }
                     )
-                case let .issueDetail(ownerLogin, repositoryName, number):
+                case let .issueDetail(fullName, number):
                     IssueDetailView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
+                        fullName: fullName,
                         issueNumber: number
                     )
                 }
@@ -165,18 +155,13 @@ struct RepositorySearchView: View {
 
     private func repositoryRow(_ repo: GitHubRepo) -> some View {
         let item = BookmarkItem.repository(RepositoryBookmark(
-            ownerLogin: repo.owner.login,
-            repositoryName: repo.name,
             fullName: repo.fullName,
             description: repo.description,
             stargazersCount: repo.stargazersCount,
             language: repo.language,
             createdAt: Date()
         ))
-        return NavigationLink(value: SearchRoute.repositoryDetail(
-            ownerLogin: repo.owner.login,
-            repositoryName: repo.name
-        )) {
+        return NavigationLink(value: SearchRoute.repositoryDetail(repo.fullName)) {
             HStack {
                 RepositoryRow(repository: repo)
                 Spacer()

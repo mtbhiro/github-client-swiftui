@@ -5,7 +5,7 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
     var searchResultHandler: ((String, Int) -> Result<[GitHubRepo], Error>)?
     var fetchResult: Result<GitHubRepoDetail, Error>
     var issuesResult: Result<[GitHubIssue], Error>
-    var issuesResultHandler: ((String, String, Int) -> Result<[GitHubIssue], Error>)?
+    var issuesResultHandler: ((GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
     var issueDetailResult: Result<GitHubIssueDetail, Error>
     var issueCommentsResult: Result<[GitHubIssueComment], Error>
     private(set) var searchCallCount = 0
@@ -36,22 +36,22 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
         return try searchResult.get()
     }
 
-    func fetchRepository(owner: String, name: String) async throws -> GitHubRepoDetail {
+    func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail {
         try fetchResult.get()
     }
 
-    func fetchIssues(owner: String, repo: String, page: Int) async throws -> [GitHubIssue] {
+    func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue] {
         if let handler = issuesResultHandler {
-            return try handler(owner, repo, page).get()
+            return try handler(fullName, page).get()
         }
         return try issuesResult.get()
     }
 
-    func fetchIssueDetail(owner: String, repo: String, number: Int) async throws -> GitHubIssueDetail {
+    func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail {
         try issueDetailResult.get()
     }
 
-    func fetchIssueComments(owner: String, repo: String, number: Int, page: Int) async throws -> [GitHubIssueComment] {
+    func fetchIssueComments(fullName: GitHubRepoFullName, number: Int, page: Int) async throws -> [GitHubIssueComment] {
         try issueCommentsResult.get()
     }
 }

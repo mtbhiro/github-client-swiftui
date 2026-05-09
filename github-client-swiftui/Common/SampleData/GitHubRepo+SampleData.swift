@@ -2,9 +2,7 @@ import Foundation
 
 nonisolated extension GitHubRepo {
     static let sampleSwift = GitHubRepo(
-        id: 44838949,
-        name: "swift",
-        fullName: "apple/swift",
+        fullName: GitHubRepoFullName(ownerLogin: "apple", name: "swift"),
         owner: .sampleApple,
         description: "The Swift Programming Language",
         htmlUrl: URL(string: "https://github.com/apple/swift")!,
@@ -15,9 +13,7 @@ nonisolated extension GitHubRepo {
     )
 
     static let sampleAlamofire = GitHubRepo(
-        id: 15062869,
-        name: "Alamofire",
-        fullName: "Alamofire/Alamofire",
+        fullName: GitHubRepoFullName(ownerLogin: "Alamofire", name: "Alamofire"),
         owner: .sampleAlamofireOrg,
         description: "Elegant HTTP Networking in Swift",
         htmlUrl: URL(string: "https://github.com/Alamofire/Alamofire")!,
@@ -28,9 +24,7 @@ nonisolated extension GitHubRepo {
     )
 
     static let sampleVapor = GitHubRepo(
-        id: 44965362,
-        name: "vapor",
-        fullName: "vapor/vapor",
+        fullName: GitHubRepoFullName(ownerLogin: "vapor", name: "vapor"),
         owner: .sampleVaporOrg,
         description: "A server-side Swift HTTP web framework.",
         htmlUrl: URL(string: "https://github.com/vapor/vapor")!,

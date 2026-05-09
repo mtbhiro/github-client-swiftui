@@ -6,14 +6,12 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
     private let issueDetailRoute: (Int) -> IssueDetailRoute
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         issueDetailRoute: @escaping (Int) -> IssueDetailRoute,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
         _model = State(initialValue: IssueListModel(
-            ownerLogin: ownerLogin,
-            repositoryName: repositoryName,
+            fullName: fullName,
             repository: repository
         ))
         self.issueDetailRoute = issueDetailRoute
@@ -73,8 +71,7 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
 
     private func issueRow(_ issue: GitHubIssue) -> some View {
         let item = BookmarkItem.issue(IssueBookmark(
-            ownerLogin: model.ownerLogin,
-            repositoryName: model.repositoryName,
+            fullName: model.fullName,
             number: issue.number,
             title: issue.title,
             state: issue.state,
@@ -111,12 +108,13 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
     }
 }
 
+private let previewFullName = GitHubRepoFullName(ownerLogin: "apple", name: "swift")
+
 #Preview("Loaded") {
     NavigationStack {
         IssueListView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
-            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            fullName: previewFullName,
+            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository()
         )
     }
@@ -126,9 +124,8 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
 #Preview("Empty") {
     NavigationStack {
         IssueListView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
-            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            fullName: previewFullName,
+            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository(issuesResult: .success([]))
         )
     }
@@ -138,9 +135,8 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
 #Preview("Error") {
     NavigationStack {
         IssueListView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
-            issueDetailRoute: { SearchRoute.issueDetail(ownerLogin: "apple", repositoryName: "swift", number: $0) },
+            fullName: previewFullName,
+            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository(
                 issuesResult: .failure(URLError(.notConnectedToInternet))
             )

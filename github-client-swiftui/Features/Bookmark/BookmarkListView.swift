@@ -31,31 +31,21 @@ struct BookmarkListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: BookmarksRoute.self) { route in
                 switch route {
-                case let .repositoryDetail(ownerLogin, repositoryName):
+                case let .repositoryDetail(fullName):
                     RepositoryDetailView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
-                        issueListRoute: BookmarksRoute.issueList(
-                            ownerLogin: ownerLogin,
-                            repositoryName: repositoryName
-                        )
+                        fullName: fullName,
+                        issueListRoute: BookmarksRoute.issueList(fullName)
                     )
-                case let .issueList(ownerLogin, repositoryName):
+                case let .issueList(fullName):
                     IssueListView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
+                        fullName: fullName,
                         issueDetailRoute: { number in
-                            BookmarksRoute.issueDetail(
-                                ownerLogin: ownerLogin,
-                                repositoryName: repositoryName,
-                                number: number
-                            )
+                            BookmarksRoute.issueDetail(fullName, number: number)
                         }
                     )
-                case let .issueDetail(ownerLogin, repositoryName, number):
+                case let .issueDetail(fullName, number):
                     IssueDetailView(
-                        ownerLogin: ownerLogin,
-                        repositoryName: repositoryName,
+                        fullName: fullName,
                         issueNumber: number
                     )
                 }
@@ -82,10 +72,7 @@ struct BookmarkListView: View {
             List {
                 ForEach(repos) { item in
                     if case let .repository(repo) = item {
-                        NavigationLink(value: BookmarksRoute.repositoryDetail(
-                            ownerLogin: repo.ownerLogin,
-                            repositoryName: repo.repositoryName
-                        )) {
+                        NavigationLink(value: BookmarksRoute.repositoryDetail(repo.fullName)) {
                             HStack {
                                 repositoryRow(repo)
                                 Spacer()
@@ -107,7 +94,7 @@ struct BookmarkListView: View {
                 Image(systemName: "book.closed")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                Text(repo.fullName)
+                Text(verbatim: String(describing: repo.fullName))
                     .font(.headline)
                     .lineLimit(1)
             }
@@ -158,8 +145,7 @@ struct BookmarkListView: View {
         return Section {
             ForEach(visibleIssues, id: \.number) { issue in
                 NavigationLink(value: BookmarksRoute.issueDetail(
-                    ownerLogin: issue.ownerLogin,
-                    repositoryName: issue.repositoryName,
+                    issue.fullName,
                     number: issue.number
                 )) {
                     HStack {
@@ -202,10 +188,7 @@ struct BookmarkListView: View {
                 .buttonStyle(.plain)
             }
         } header: {
-            NavigationLink(value: BookmarksRoute.repositoryDetail(
-                ownerLogin: group.ownerLogin,
-                repositoryName: group.repositoryName
-            )) {
+            NavigationLink(value: BookmarksRoute.repositoryDetail(group.fullName)) {
                 HStack(spacing: 6) {
                     Image(systemName: "book.closed")
                         .font(.caption)
@@ -259,26 +242,23 @@ struct BookmarkListView: View {
     // MARK: - Grouping
 
     private func groupedIssues() -> [IssueGroup] {
-        var dict: [String: [IssueBookmark]] = [:]
-        var order: [String] = []
+        var dict: [GitHubRepoFullName: [IssueBookmark]] = [:]
+        var order: [GitHubRepoFullName] = []
 
         for item in store.issues() {
             if case let .issue(issue) = item {
-                let key = "\(issue.ownerLogin)/\(issue.repositoryName)"
-                if dict[key] == nil {
-                    order.append(key)
+                if dict[issue.fullName] == nil {
+                    order.append(issue.fullName)
                 }
-                dict[key, default: []].append(issue)
+                dict[issue.fullName, default: []].append(issue)
             }
         }
 
-        return order.compactMap { key in
-            guard var issues = dict[key], let first = issues.first else { return nil }
+        return order.compactMap { fullName in
+            guard var issues = dict[fullName] else { return nil }
             issues.sort { $0.createdAt < $1.createdAt }
             return IssueGroup(
-                key: key,
-                ownerLogin: first.ownerLogin,
-                repositoryName: first.repositoryName,
+                fullName: fullName,
                 issues: issues
             )
         }
@@ -305,10 +285,10 @@ private enum BookmarkFilter {
 }
 
 private struct IssueGroup {
-    let key: String
-    let ownerLogin: String
-    let repositoryName: String
+    let fullName: GitHubRepoFullName
     let issues: [IssueBookmark]
+
+    var key: String { String(describing: fullName) }
 }
 
 #Preview("Empty") {
@@ -318,22 +298,20 @@ private struct IssueGroup {
 }
 
 #Preview("Repositories") {
-    BookmarkListView()
+    let appleSwift = GitHubRepoFullName(ownerLogin: "apple", name: "swift")
+    let alamofire = GitHubRepoFullName(ownerLogin: "Alamofire", name: "Alamofire")
+    return BookmarkListView()
         .environment(AppCoordinator())
         .environment(BookmarkStore(items: [
             .repository(RepositoryBookmark(
-                ownerLogin: "apple",
-                repositoryName: "swift",
-                fullName: "apple/swift",
+                fullName: appleSwift,
                 description: "The Swift Programming Language",
                 stargazersCount: 67000,
                 language: "C++",
                 createdAt: Date()
             )),
             .repository(RepositoryBookmark(
-                ownerLogin: "Alamofire",
-                repositoryName: "Alamofire",
-                fullName: "Alamofire/Alamofire",
+                fullName: alamofire,
                 description: "Elegant HTTP Networking in Swift",
                 stargazersCount: 41000,
                 language: "Swift",
@@ -343,12 +321,13 @@ private struct IssueGroup {
 }
 
 #Preview("Issues Grouped") {
-    BookmarkListView()
+    let appleSwift = GitHubRepoFullName(ownerLogin: "apple", name: "swift")
+    let alamofire = GitHubRepoFullName(ownerLogin: "Alamofire", name: "Alamofire")
+    return BookmarkListView()
         .environment(AppCoordinator())
         .environment(BookmarkStore(items: [
             .issue(IssueBookmark(
-                ownerLogin: "apple",
-                repositoryName: "swift",
+                fullName: appleSwift,
                 number: 42,
                 title: "Swift 6 strict concurrency でのコンパイルエラー",
                 state: .open,
@@ -356,8 +335,7 @@ private struct IssueGroup {
                 createdAt: Date()
             )),
             .issue(IssueBookmark(
-                ownerLogin: "apple",
-                repositoryName: "swift",
+                fullName: appleSwift,
                 number: 45,
                 title: "async/await への移行",
                 state: .open,
@@ -365,8 +343,7 @@ private struct IssueGroup {
                 createdAt: Date()
             )),
             .issue(IssueBookmark(
-                ownerLogin: "apple",
-                repositoryName: "swift",
+                fullName: appleSwift,
                 number: 38,
                 title: "README にインストール手順を追加",
                 state: .closed,
@@ -374,8 +351,7 @@ private struct IssueGroup {
                 createdAt: Date()
             )),
             .issue(IssueBookmark(
-                ownerLogin: "apple",
-                repositoryName: "swift",
+                fullName: appleSwift,
                 number: 50,
                 title: "CI パイプラインの最適化",
                 state: .open,
@@ -383,8 +359,7 @@ private struct IssueGroup {
                 createdAt: Date()
             )),
             .issue(IssueBookmark(
-                ownerLogin: "Alamofire",
-                repositoryName: "Alamofire",
+                fullName: alamofire,
                 number: 10,
                 title: "リクエストタイムアウトの設定",
                 state: .open,

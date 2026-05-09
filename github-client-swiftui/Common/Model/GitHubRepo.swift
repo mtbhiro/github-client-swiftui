@@ -1,9 +1,8 @@
 import Foundation
 
 nonisolated struct GitHubRepo: Sendable, Identifiable, Hashable {
-    let id: Int
-    let name: String
-    let fullName: String
+    var id: GitHubRepoFullName { fullName }
+    let fullName: GitHubRepoFullName
     let owner: GitHubRepoOwner
     let description: String?
     let htmlUrl: URL

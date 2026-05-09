@@ -5,14 +5,12 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
     private let issueListRoute: IssueListRoute
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         issueListRoute: IssueListRoute,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
         _model = State(initialValue: RepositoryDetailModel(
-            ownerLogin: ownerLogin,
-            repositoryName: repositoryName,
+            fullName: fullName,
             repository: repository
         ))
         self.issueListRoute = issueListRoute
@@ -64,7 +62,7 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
                     Text(repo.owner.login)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(repo.name)
+                    Text(repo.fullName.name)
                         .font(.title2)
                         .fontWeight(.bold)
                 }
@@ -219,7 +217,7 @@ private extension RepositoryDetailModel.Phase {
         case .loading:
             "読み込み中..."
         case let .loaded(repo):
-            repo.fullName
+            String(describing: repo.fullName)
         case .error:
             "エラー"
         }
@@ -271,22 +269,22 @@ private struct FlowLayout: Layout {
 }
 
 #Preview("Loaded") {
+    let fullName = GitHubRepoFullName(ownerLogin: "apple", name: "swift")
     NavigationStack {
         RepositoryDetailView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
-            issueListRoute: SearchRoute.issueList(ownerLogin: "apple", repositoryName: "swift"),
+            fullName: fullName,
+            issueListRoute: SearchRoute.issueList(fullName),
             repository: MockGithubRepoRepository()
         )
     }
 }
 
 #Preview("Error") {
+    let fullName = GitHubRepoFullName(ownerLogin: "apple", name: "swift")
     NavigationStack {
         RepositoryDetailView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
-            issueListRoute: SearchRoute.issueList(ownerLogin: "apple", repositoryName: "swift"),
+            fullName: fullName,
+            issueListRoute: SearchRoute.issueList(fullName),
             repository: MockGithubRepoRepository(
                 fetchResult: .failure(URLError(.notConnectedToInternet))
             )

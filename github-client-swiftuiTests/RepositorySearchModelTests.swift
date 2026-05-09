@@ -238,9 +238,7 @@ struct RepositorySearchModelTests {
     private func makeRepos(count: Int, startId: Int = 1) -> [GitHubRepo] {
         (startId..<startId + count).map { id in
             GitHubRepo(
-                id: id,
-                name: "repo-\(id)",
-                fullName: "owner/repo-\(id)",
+                fullName: GitHubRepoFullName(ownerLogin: "owner", name: "repo-\(id)"),
                 owner: .sampleApple,
                 description: nil,
                 htmlUrl: URL(string: "https://github.com/owner/repo-\(id)")!,

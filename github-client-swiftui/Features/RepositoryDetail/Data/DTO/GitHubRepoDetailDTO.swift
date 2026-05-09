@@ -38,9 +38,7 @@ nonisolated struct GitHubRepoDetailDTO: Decodable, Sendable {
     func toDomain() -> GitHubRepoDetail {
         let formatter = ISO8601DateFormatter()
         return GitHubRepoDetail(
-            id: id,
-            name: name,
-            fullName: fullName,
+            fullName: GitHubRepoFullName(ownerLogin: owner.login, name: name),
             owner: GitHubRepoOwner(
                 login: owner.login,
                 id: owner.id,

@@ -3,8 +3,7 @@ import Foundation
 @Observable
 final class RepositoryDetailModel {
     private(set) var phase: Phase = .loading
-    private let ownerLogin: String
-    private let repositoryName: String
+    private let fullName: GitHubRepoFullName
     private let repository: GithubRepoRepositoryProtocol
     private var loadTask: Task<Void, Never>?
 
@@ -15,12 +14,10 @@ final class RepositoryDetailModel {
     }
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
-        self.ownerLogin = ownerLogin
-        self.repositoryName = repositoryName
+        self.fullName = fullName
         self.repository = repository
     }
 
@@ -43,10 +40,7 @@ final class RepositoryDetailModel {
         loadTask?.cancel()
         loadTask = Task {
             do {
-                let repo = try await repository.fetchRepository(
-                    owner: ownerLogin,
-                    name: repositoryName
-                )
+                let repo = try await repository.fetchRepository(fullName: fullName)
                 guard !Task.isCancelled else { return }
                 phase = .loaded(repo)
             } catch is CancellationError {

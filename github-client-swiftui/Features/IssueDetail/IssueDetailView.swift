@@ -4,14 +4,12 @@ struct IssueDetailView: View {
     @State private var model: IssueDetailModel
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         issueNumber: Int,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
         _model = State(initialValue: IssueDetailModel(
-            ownerLogin: ownerLogin,
-            repositoryName: repositoryName,
+            fullName: fullName,
             issueNumber: issueNumber,
             repository: repository
         ))
@@ -258,8 +256,7 @@ private extension Color {
 #Preview("Loaded") {
     NavigationStack {
         IssueDetailView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
+            fullName: GitHubRepoFullName(ownerLogin: "apple", name: "swift"),
             issueNumber: 42,
             repository: MockGithubRepoRepository()
         )
@@ -269,8 +266,7 @@ private extension Color {
 #Preview("Error") {
     NavigationStack {
         IssueDetailView(
-            ownerLogin: "apple",
-            repositoryName: "swift",
+            fullName: GitHubRepoFullName(ownerLogin: "apple", name: "swift"),
             issueNumber: 42,
             repository: MockGithubRepoRepository(
                 issueDetailResult: .failure(URLError(.notConnectedToInternet))

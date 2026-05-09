@@ -2,10 +2,10 @@ import Foundation
 
 nonisolated protocol GithubRepoRepositoryProtocol: Sendable {
     func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo]
-    func fetchRepository(owner: String, name: String) async throws -> GitHubRepoDetail
-    func fetchIssues(owner: String, repo: String, page: Int) async throws -> [GitHubIssue]
-    func fetchIssueDetail(owner: String, repo: String, number: Int) async throws -> GitHubIssueDetail
-    func fetchIssueComments(owner: String, repo: String, number: Int, page: Int) async throws -> [GitHubIssueComment]
+    func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail
+    func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue]
+    func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail
+    func fetchIssueComments(fullName: GitHubRepoFullName, number: Int, page: Int) async throws -> [GitHubIssueComment]
 }
 
 nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
@@ -28,15 +28,15 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         return response.toDomain()
     }
 
-    func fetchRepository(owner: String, name: String) async throws -> GitHubRepoDetail {
-        let request = HttpRequest(path: "/repos/\(owner)/\(name)")
+    func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail {
+        let request = HttpRequest(path: "/repos/\(fullName.ownerLogin)/\(fullName.name)")
         let response: GitHubRepoDetailDTO = try await httpClient.send(request)
         return response.toDomain()
     }
 
-    func fetchIssues(owner: String, repo: String, page: Int) async throws -> [GitHubIssue] {
+    func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue] {
         let request = HttpRequest(
-            path: "/repos/\(owner)/\(repo)/issues",
+            path: "/repos/\(fullName.ownerLogin)/\(fullName.name)/issues",
             queryItems: [
                 URLQueryItem(name: "state", value: "all"),
                 URLQueryItem(name: "page", value: String(page)),
@@ -47,15 +47,15 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         return response.map { $0.toDomain() }
     }
 
-    func fetchIssueDetail(owner: String, repo: String, number: Int) async throws -> GitHubIssueDetail {
-        let request = HttpRequest(path: "/repos/\(owner)/\(repo)/issues/\(number)")
+    func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail {
+        let request = HttpRequest(path: "/repos/\(fullName.ownerLogin)/\(fullName.name)/issues/\(number)")
         let response: GitHubIssueDetailDTO = try await httpClient.send(request)
         return response.toDomain()
     }
 
-    func fetchIssueComments(owner: String, repo: String, number: Int, page: Int) async throws -> [GitHubIssueComment] {
+    func fetchIssueComments(fullName: GitHubRepoFullName, number: Int, page: Int) async throws -> [GitHubIssueComment] {
         let request = HttpRequest(
-            path: "/repos/\(owner)/\(repo)/issues/\(number)/comments",
+            path: "/repos/\(fullName.ownerLogin)/\(fullName.name)/issues/\(number)/comments",
             queryItems: [
                 URLQueryItem(name: "page", value: String(page)),
                 URLQueryItem(name: "per_page", value: "30"),

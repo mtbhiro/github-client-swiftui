@@ -7,9 +7,9 @@ enum BookmarkItem: Sendable, Codable, Hashable, Identifiable {
     var id: String {
         switch self {
         case let .repository(repo):
-            "repo:\(repo.ownerLogin)/\(repo.repositoryName)"
+            "repo:\(repo.fullName)"
         case let .issue(issue):
-            "issue:\(issue.ownerLogin)/\(issue.repositoryName)#\(issue.number)"
+            "issue:\(issue.fullName)#\(issue.number)"
         }
     }
 
@@ -25,9 +25,7 @@ enum BookmarkItem: Sendable, Codable, Hashable, Identifiable {
 }
 
 struct RepositoryBookmark: Sendable, Codable, Hashable {
-    let ownerLogin: String
-    let repositoryName: String
-    let fullName: String
+    let fullName: GitHubRepoFullName
     let description: String?
     let stargazersCount: Int
     let language: String?
@@ -35,8 +33,7 @@ struct RepositoryBookmark: Sendable, Codable, Hashable {
 }
 
 struct IssueBookmark: Sendable, Codable, Hashable {
-    let ownerLogin: String
-    let repositoryName: String
+    let fullName: GitHubRepoFullName
     let number: Int
     let title: String
     let state: IssueState

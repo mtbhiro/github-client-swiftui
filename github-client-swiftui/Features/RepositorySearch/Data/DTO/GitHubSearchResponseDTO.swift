@@ -43,9 +43,7 @@ nonisolated struct GitHubRepoDTO: Decodable, Sendable {
 
     func toDomain() -> GitHubRepo {
         GitHubRepo(
-            id: id,
-            name: name,
-            fullName: fullName,
+            fullName: GitHubRepoFullName(ownerLogin: owner.login, name: name),
             owner: GitHubRepoOwner(
                 login: owner.login,
                 id: owner.id,

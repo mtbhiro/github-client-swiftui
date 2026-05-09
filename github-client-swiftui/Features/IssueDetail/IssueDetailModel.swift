@@ -6,8 +6,7 @@ final class IssueDetailModel {
     private(set) var comments: [GitHubIssueComment] = []
     private(set) var commentsPhase: CommentsPhase = .idle
 
-    let ownerLogin: String
-    let repositoryName: String
+    let fullName: GitHubRepoFullName
     let issueNumber: Int
 
     private let repository: GithubRepoRepositoryProtocol
@@ -28,13 +27,11 @@ final class IssueDetailModel {
     }
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         issueNumber: Int,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
-        self.ownerLogin = ownerLogin
-        self.repositoryName = repositoryName
+        self.fullName = fullName
         self.issueNumber = issueNumber
         self.repository = repository
     }
@@ -65,7 +62,7 @@ final class IssueDetailModel {
         loadTask = Task {
             do {
                 let detail = try await repository.fetchIssueDetail(
-                    owner: ownerLogin, repo: repositoryName, number: issueNumber
+                    fullName: fullName, number: issueNumber
                 )
                 guard !Task.isCancelled else { return }
                 phase = .loaded(detail)
@@ -84,7 +81,7 @@ final class IssueDetailModel {
         commentsTask = Task {
             do {
                 let result = try await repository.fetchIssueComments(
-                    owner: ownerLogin, repo: repositoryName, number: issueNumber, page: 1
+                    fullName: fullName, number: issueNumber, page: 1
                 )
                 guard !Task.isCancelled else { return }
                 comments = result

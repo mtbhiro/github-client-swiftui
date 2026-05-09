@@ -18,8 +18,7 @@ final class IssueListModel {
     private(set) var isLoadingMore: Bool = false
     private(set) var hasMorePages: Bool = false
 
-    let ownerLogin: String
-    let repositoryName: String
+    let fullName: GitHubRepoFullName
 
     private static let perPage = 30
     private var currentPage: Int = 1
@@ -28,12 +27,10 @@ final class IssueListModel {
     private let repository: GithubRepoRepositoryProtocol
 
     init(
-        ownerLogin: String,
-        repositoryName: String,
+        fullName: GitHubRepoFullName,
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
     ) {
-        self.ownerLogin = ownerLogin
-        self.repositoryName = repositoryName
+        self.fullName = fullName
         self.repository = repository
     }
 
@@ -61,9 +58,7 @@ final class IssueListModel {
         loadMoreTask = nil
 
         do {
-            let results = try await repository.fetchIssues(
-                owner: ownerLogin, repo: repositoryName, page: 1
-            )
+            let results = try await repository.fetchIssues(fullName: fullName, page: 1)
             issues = results
             currentPage = 1
             hasMorePages = results.count >= Self.perPage
@@ -83,8 +78,7 @@ final class IssueListModel {
             guard let self else { return }
             do {
                 let results = try await self.repository.fetchIssues(
-                    owner: self.ownerLogin,
-                    repo: self.repositoryName,
+                    fullName: self.fullName,
                     page: nextPage
                 )
                 self.issues.append(contentsOf: results)
@@ -102,9 +96,7 @@ final class IssueListModel {
         loadTask?.cancel()
         loadTask = Task {
             do {
-                let results = try await repository.fetchIssues(
-                    owner: ownerLogin, repo: repositoryName, page: 1
-                )
+                let results = try await repository.fetchIssues(fullName: fullName, page: 1)
                 guard !Task.isCancelled else { return }
                 issues = results
                 currentPage = 1
