@@ -185,13 +185,14 @@ struct RepositorySearchModelTests {
         model.onSubmit()
         try await Task.sleep(for: .milliseconds(50))
 
+        let baseline = mock.searchCallCount
+
         mock.searchResult = .success(makeRepos(count: 30, startId: 31))
         model.loadNextPageIfNeeded()
-        let callCountAfterFirst = mock.searchCallCount
         model.loadNextPageIfNeeded()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(mock.searchCallCount == callCountAfterFirst)
+        #expect(mock.searchCallCount == baseline + 1)
     }
 
     @Test func newSearch_resetsPagination() async throws {

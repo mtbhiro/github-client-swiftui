@@ -10,4 +10,5 @@
 
 | ファイル | 内容 |
 |---|---|
-| [xcodebuild-mcp.md](xcodebuild-mcp.md) | XcodeBuildMCP / AXe の `snapshot_ui` でタブバー子要素が取れない、SourceKit の偽エラー など |
+| [xcodebuild-mcp.md](xcodebuild-mcp.md) | XcodeBuildMCP / AXe の `snapshot_ui` でタブバー子要素が取れない、SourceKit の偽エラー、`test_sim` でのシミュレータ多重起動 など |
+| [testing.md](testing.md) | テスト並列実行と stub state 共有による失敗／クラッシュ など |

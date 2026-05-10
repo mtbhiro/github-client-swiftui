@@ -33,7 +33,7 @@
 コード変更後は以下の順で確認する：
 
 1. **ビルド確認**: `mcp__XcodeBuildMCP__build_sim` を `extraArgs: ["build-for-testing"]` で呼び、プロダクトコードとテストコードの両方がコンパイル・リンクできることを確認する。
-2. **テスト実行**: ビルドが通ったら**必ず** `mcp__XcodeBuildMCP__test_sim` でユニットテストを実走し、合否を確認する。変更が View レイヤや軽微な差分であってもスキップしない。
+2. **テスト実行**: ビルドが通ったら**必ず** `mcp__XcodeBuildMCP__test_sim` でユニットテストを実走し、合否を確認する。変更が View レイヤや軽微な差分であってもスキップしない。呼び出し時は **必ず `extraArgs: ["-skip-testing:github-client-swiftuiUITests"]` を渡して UI テストターゲットをスキップする**（UI テストは現状空のテンプレートで、実行すると configuration ごとにシミュレータが多重起動するため）。
 3. **動作確認**（必要に応じて）: `mcp__XcodeBuildMCP__build_run_sim` でアプリを起動し、画面・状態を観測したり操作したりする。観測には `screenshot` / `snapshot_ui` / `record_sim_video` を使い、UI 操作は `tap` / `swipe` / `type_text` などを使う。
 
 ## ログ観測

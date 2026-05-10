@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import github_client_swiftui
 
+@Suite(.serialized)
 struct URLSessionHttpClientTests {
 
     // MARK: - Test Helpers
