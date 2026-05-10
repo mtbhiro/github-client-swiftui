@@ -43,3 +43,7 @@
 ## カバレッジ
 
 - `mcp__XcodeBuildMCP__get_coverage_report` / `mcp__XcodeBuildMCP__get_file_coverage` を使う。
+
+# 既知の落とし穴
+
+挙動が想定と違う・自動化が変な失敗をする・などで困ったときは `github-client-swiftui/docs/pitfalls/` を参照する。テーマ別に Markdown が置かれている（索引は `docs/pitfalls/README.md`）。

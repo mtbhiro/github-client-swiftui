@@ -168,7 +168,9 @@ struct RepositorySearchView: View {
                 BookmarkButton(isBookmarked: bookmarkStore.contains(item)) {
                     bookmarkStore.toggle(item)
                 }
+                .accessibilityIdentifier("BookmarkButton-\(repo.fullName)")
             }
+            .accessibilityElement(children: .contain)
         }
     }
 
