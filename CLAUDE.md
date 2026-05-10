@@ -21,15 +21,25 @@
 - Xcode プロジェクトは `PBXFileSystemSynchronizedRootGroup` を使用している。ディスク上のフォルダ構造がそのまま Xcode のグループ構造に同期されるため、ファイルやフォルダの追加・削除・移動時に `pbxproj` を手動編集する必要はない。
 - 新規ファイル作成時は適切なディレクトリに配置するだけでよく、`pbxproj` への参照追加は不要。
 
-# xcodebuild による品質保証
+# Xcode ビルド・テスト・動作確認
 
-- コード変更後はビルドとテストビルドで品質を確認する。
-- **シミュレータを起動してはならない。** `xcodebuild test` はシミュレータを起動しアプリを実行するため使用禁止。
-- ビルド確認には `build-for-testing` を使用する。これはコンパイルとテストターゲットのリンクのみを行い、シミュレータを起動しない。
-- ユニットテスト実行が必要な場合は `test-without-building` を使い、事前に起動済みのシミュレータがある場合のみ実行する。通常は `build-for-testing` の成功で十分とする。
-- destination は `'platform=iOS Simulator,name=iPhone 17,OS=26.4.1'` を使用する。
-- コマンド例:
-  ```sh
-  # ビルド確認（テストターゲット含む）
-  xcodebuild -scheme github-client-swiftui -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4.1' build-for-testing
-  ```
+- Xcode のビルド・テスト・シミュレータ操作は **必ず XcodeBuildMCP（`mcp__XcodeBuildMCP__*` ツール群）を使用する**。`xcodebuild` を Bash で直接実行してはならない。
+- セッションで初めてビルド・テスト系のツールを呼ぶ前に、必ず `mcp__XcodeBuildMCP__session_show_defaults` を呼び、project / scheme / simulator が設定されているか確認する。未設定なら `mcp__XcodeBuildMCP__session_set_defaults` で設定する。
+  - scheme: `github-client-swiftui`
+  - simulator: `iPhone 17`（OS `26.4.1`）
+
+## 標準フロー
+
+コード変更後は以下の順で確認する：
+
+1. **ビルド確認**: `mcp__XcodeBuildMCP__build_sim` を `extraArgs: ["build-for-testing"]` で呼び、プロダクトコードとテストコードの両方がコンパイル・リンクできることを確認する。
+2. **テスト実行**: ビルドが通ったら**必ず** `mcp__XcodeBuildMCP__test_sim` でユニットテストを実走し、合否を確認する。変更が View レイヤや軽微な差分であってもスキップしない。
+3. **動作確認**（必要に応じて）: `mcp__XcodeBuildMCP__build_run_sim` でアプリを起動し、画面・状態を観測したり操作したりする。観測には `screenshot` / `snapshot_ui` / `record_sim_video` を使い、UI 操作は `tap` / `swipe` / `type_text` などを使う。
+
+## ログ観測
+
+- アプリ起動時のレスポンスに含まれるログファイルパスを `Monitor` ツールで `tail -f` し、関心のあるパターンで `grep --line-buffered` するとリアルタイムにログをイベントとして受け取れる。追加読み込み・エラー発生など、操作とログの突き合わせが必要なときに使う。
+
+## カバレッジ
+
+- `mcp__XcodeBuildMCP__get_coverage_report` / `mcp__XcodeBuildMCP__get_file_coverage` を使う。
