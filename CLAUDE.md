@@ -16,6 +16,10 @@
 - テストは Swift Testing を主に使用する。
 - GitHub API は初期実装では unauthenticated で利用し、将来的な認証機能追加に備えて API Client を差し替えやすくする。
 
+# Swift / SwiftUI コードを書くときのルール
+
+Swift / SwiftUI コード（プロダクトコード・テストコード）の編集に着手する前に **必ず `.claude/rules/swift-coding.md` を読む**。本書の前提と整合する形で、状態モデル・非同期/キャンセル戦略・テストファースト運用・困ったときの参照先（`docs/guide/` / `docs/pitfalls/` / `mcp__cupertino__*`）などを集約している。
+
 # Xcode プロジェクト構成
 
 - Xcode プロジェクトは `PBXFileSystemSynchronizedRootGroup` を使用している。ディスク上のフォルダ構造がそのまま Xcode のグループ構造に同期されるため、ファイルやフォルダの追加・削除・移動時に `pbxproj` を手動編集する必要はない。
