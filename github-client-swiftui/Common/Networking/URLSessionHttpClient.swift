@@ -32,7 +32,11 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw HttpClientError.httpError(statusCode: httpResponse.statusCode, data: data)
+            throw HttpClientError.httpError(
+                statusCode: httpResponse.statusCode,
+                data: data,
+                headers: Self.headerMap(from: httpResponse)
+            )
         }
 
         do {
@@ -67,5 +71,14 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         }
 
         return urlRequest
+    }
+
+    private static func headerMap(from response: HTTPURLResponse) -> [String: String] {
+        var map: [String: String] = [:]
+        for (key, value) in response.allHeaderFields {
+            guard let keyString = key as? String, let valueString = value as? String else { continue }
+            map[keyString] = valueString
+        }
+        return map
     }
 }

@@ -44,8 +44,11 @@ struct URLSessionHttpClientTests {
 
         let request = HttpRequest(path: "/search/repositories")
 
-        await #expect(throws: HttpClientError.httpError(statusCode: 403, data: body)) {
+        await #expect {
             let _: SampleResponse = try await client.send(request)
+        } throws: { error in
+            guard case let HttpClientError.httpError(statusCode, data, _) = error else { return false }
+            return statusCode == 403 && data == body
         }
     }
 
@@ -56,8 +59,30 @@ struct URLSessionHttpClientTests {
 
         let request = HttpRequest(path: "/repos/owner/repo")
 
-        await #expect(throws: HttpClientError.httpError(statusCode: 500, data: body)) {
+        await #expect {
             let _: SampleResponse = try await client.send(request)
+        } throws: { error in
+            guard case let HttpClientError.httpError(statusCode, data, _) = error else { return false }
+            return statusCode == 500 && data == body
+        }
+    }
+
+    @Test func send_httpError_includesResponseHeaders() async throws {
+        let (client, stub) = makeSUT()
+        let body = #"{"message":"forbidden"}"#.data(using: .utf8)!
+        stub.stub(data: body, statusCode: 403, headers: [
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": "1700000000",
+        ])
+
+        let request = HttpRequest(path: "/search/repositories")
+
+        await #expect {
+            let _: SampleResponse = try await client.send(request)
+        } throws: { error in
+            guard case let HttpClientError.httpError(_, _, headers) = error else { return false }
+            return headers["X-RateLimit-Remaining"] == "0"
+                && headers["X-RateLimit-Reset"] == "1700000000"
         }
     }
 
@@ -194,18 +219,21 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var stubbedStatusCode: Int = 200
     nonisolated(unsafe) static var stubbedError: Error?
     nonisolated(unsafe) static var stubbedDelay: TimeInterval = 0
+    nonisolated(unsafe) static var stubbedHeaders: [String: String] = [:]
     nonisolated(unsafe) static var onRequest: ((URLRequest) -> Void)?
 
     static func stub(
         data: Data? = nil,
         statusCode: Int = 200,
         error: Error? = nil,
-        delay: TimeInterval = 0
+        delay: TimeInterval = 0,
+        headers: [String: String] = [:]
     ) {
         stubbedData = data
         stubbedStatusCode = statusCode
         stubbedError = error
         stubbedDelay = delay
+        stubbedHeaders = headers
         onRequest = nil
     }
 
@@ -228,7 +256,7 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
             url: request.url!,
             statusCode: Self.stubbedStatusCode,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: Self.stubbedHeaders
         )!
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

@@ -1,8 +1,8 @@
 import Foundation
 
 nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, @unchecked Sendable {
-    var searchResult: Result<[GitHubRepo], Error>
-    var searchResultHandler: ((String, Int) -> Result<[GitHubRepo], Error>)?
+    var searchResult: Result<RepositorySearchPageResult, Error>
+    var searchResultHandler: ((String, String?, String?, Int) -> Result<RepositorySearchPageResult, Error>)?
     var fetchResult: Result<GitHubRepoDetail, Error>
     var issuesResult: Result<[GitHubIssue], Error>
     var issuesResultHandler: ((GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
@@ -10,10 +10,14 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
     var issueCommentsResult: Result<[GitHubIssueComment], Error>
     private(set) var searchCallCount = 0
     private(set) var lastQuery: String?
+    private(set) var lastSort: String?
+    private(set) var lastOrder: String?
     private(set) var lastPage: Int?
 
     init(
-        searchResult: Result<[GitHubRepo], Error> = .success(GitHubRepo.samples),
+        searchResult: Result<RepositorySearchPageResult, Error> = .success(
+            RepositorySearchPageResult(repositories: GitHubRepo.samples, totalCount: GitHubRepo.samples.count, incompleteResults: false)
+        ),
         fetchResult: Result<GitHubRepoDetail, Error> = .success(.sampleSwift),
         issuesResult: Result<[GitHubIssue], Error> = .success(GitHubIssue.samples),
         issueDetailResult: Result<GitHubIssueDetail, Error> = .success(.sample),
@@ -26,12 +30,19 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
         self.issueCommentsResult = issueCommentsResult
     }
 
-    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo] {
+    func searchRepositories(
+        query: String,
+        sort: String?,
+        order: String?,
+        page: Int
+    ) async throws -> RepositorySearchPageResult {
         searchCallCount += 1
         lastQuery = query
+        lastSort = sort
+        lastOrder = order
         lastPage = page
         if let handler = searchResultHandler {
-            return try handler(query, page).get()
+            return try handler(query, sort, order, page).get()
         }
         return try searchResult.get()
     }

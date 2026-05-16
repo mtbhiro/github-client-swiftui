@@ -1,7 +1,12 @@
 import Foundation
 
 nonisolated protocol GithubRepoRepositoryProtocol: Sendable {
-    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo]
+    func searchRepositories(
+        query: String,
+        sort: String?,
+        order: String?,
+        page: Int
+    ) async throws -> RepositorySearchPageResult
     func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail
     func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue]
     func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail
@@ -15,17 +20,31 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         self.httpClient = httpClient
     }
 
-    func searchRepositories(query: String, page: Int) async throws -> [GitHubRepo] {
-        let request = HttpRequest(
-            path: "/search/repositories",
-            queryItems: [
-                URLQueryItem(name: "q", value: query),
-                URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "per_page", value: "30"),
-            ]
-        )
+    func searchRepositories(
+        query: String,
+        sort: String?,
+        order: String?,
+        page: Int
+    ) async throws -> RepositorySearchPageResult {
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "per_page", value: "30"),
+        ]
+        if let sort {
+            queryItems.append(URLQueryItem(name: "sort", value: sort))
+        }
+        if let order {
+            queryItems.append(URLQueryItem(name: "order", value: order))
+        }
+
+        let request = HttpRequest(path: "/search/repositories", queryItems: queryItems)
         let response: GitHubSearchResponseDTO = try await httpClient.send(request)
-        return response.toDomain()
+        return RepositorySearchPageResult(
+            repositories: response.toDomain(),
+            totalCount: response.totalCount,
+            incompleteResults: response.incompleteResults
+        )
     }
 
     func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail {

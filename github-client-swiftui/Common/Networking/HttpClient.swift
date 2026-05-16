@@ -54,7 +54,7 @@ nonisolated enum HttpMethod: String, Sendable {
 
 nonisolated enum HttpClientError: Error, Equatable {
     case invalidURL
-    case httpError(statusCode: Int, data: Data)
+    case httpError(statusCode: Int, data: Data, headers: [String: String])
     case decodingError
     case networkError(URLError)
 
@@ -62,8 +62,8 @@ nonisolated enum HttpClientError: Error, Equatable {
         switch (lhs, rhs) {
         case (.invalidURL, .invalidURL):
             return true
-        case let (.httpError(lCode, lData), .httpError(rCode, rData)):
-            return lCode == rCode && lData == rData
+        case let (.httpError(lCode, lData, lHeaders), .httpError(rCode, rData, rHeaders)):
+            return lCode == rCode && lData == rData && lHeaders == rHeaders
         case (.decodingError, .decodingError):
             return true
         case let (.networkError(lError), .networkError(rError)):
