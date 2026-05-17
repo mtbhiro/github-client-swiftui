@@ -37,6 +37,8 @@ final class RepositorySearchModel {
     static let perPage = 30
     static let maxAccumulated = 1000
 
+    var inFlightTask: Task<Void, Never>? { currentTask }
+
     private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
     private let debounceDuration: Duration

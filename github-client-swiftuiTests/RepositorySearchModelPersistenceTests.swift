@@ -3,7 +3,6 @@ import Testing
 @testable import github_client_swiftui
 
 @MainActor
-@Suite(.serialized)
 struct RepositorySearchModelPersistenceTests {
 
     // MARK: - Helpers
@@ -42,15 +41,15 @@ struct RepositorySearchModelPersistenceTests {
         return (model, mock, store, defaults)
     }
 
-    private func waitTick(_ ms: Int = 50) async {
-        try? await Task.sleep(for: .milliseconds(ms))
+    private func waitForInflight(_ model: RepositorySearchModel) async {
+        await model.inFlightTask?.value
     }
 
     // MARK: - 起動時の復元
 
     @Test func initWithoutSavedSnapshot_usesDefaults_andStaysIdle() async {
         let (model, mock, _, _) = makeSUT()
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(model.appliedQualifiers == .empty)
         #expect(model.sort == .default)
@@ -75,7 +74,7 @@ struct RepositorySearchModelPersistenceTests {
         preStore.save(saved)
 
         let (model, mock, _, _) = makeSUT(defaults: defaults)
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(model.appliedQualifiers == saved.qualifiers)
         #expect(model.sort == saved.sort)
@@ -89,7 +88,7 @@ struct RepositorySearchModelPersistenceTests {
         defaults.set(Data("not a json".utf8), forKey: RepositorySearchConditionStore.storageKey)
 
         let (model, mock, _, defaultsOut) = makeSUT(defaults: defaults)
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(model.appliedQualifiers == .empty)
         #expect(model.sort == .default)
@@ -114,7 +113,7 @@ struct RepositorySearchModelPersistenceTests {
 
         let (model, mock, _, _) = makeSUT(defaults: defaults)
         model.query = "ui"
-        await waitTick()
+        await waitForInflight(model)
 
         await #expect(mock.searchCallCount == 1)
         await #expect(mock.lastQuery?.contains("language:Swift") == true)
@@ -129,7 +128,7 @@ struct RepositorySearchModelPersistenceTests {
         q.language = GitHubLanguage(name: "Swift")
 
         model.applyQualifiers(q)
-        await waitTick()
+        await waitForInflight(model)
 
         let loaded = store.load()
         #expect(loaded?.qualifiers == q)
@@ -140,7 +139,7 @@ struct RepositorySearchModelPersistenceTests {
         let (model, _, store, _) = makeSUT()
 
         model.setSort(RepositorySearchSort(key: .updated, order: .desc))
-        await waitTick()
+        await waitForInflight(model)
 
         let loaded = store.load()
         #expect(loaded?.sort == RepositorySearchSort(key: .updated, order: .desc))
@@ -152,12 +151,12 @@ struct RepositorySearchModelPersistenceTests {
         var first = RepositorySearchQualifiers.empty
         first.language = GitHubLanguage(name: "Swift")
         model.applyQualifiers(first)
-        await waitTick()
+        await waitForInflight(model)
 
         var second = RepositorySearchQualifiers.empty
         second.topics = ["ios"]
         model.applyQualifiers(second)
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(store.load()?.qualifiers == second)
     }
@@ -168,10 +167,10 @@ struct RepositorySearchModelPersistenceTests {
         q.language = GitHubLanguage(name: "Swift")
         q.topics = ["ios", "swiftui"]
         model.applyQualifiers(q)
-        await waitTick()
+        await waitForInflight(model)
 
         model.removeChip(.topic(label: "#ios", value: "ios"))
-        await waitTick()
+        await waitForInflight(model)
 
         let loaded = store.load()
         #expect(loaded?.qualifiers.topics == ["swiftui"])
@@ -185,11 +184,11 @@ struct RepositorySearchModelPersistenceTests {
         var q = RepositorySearchQualifiers.empty
         q.language = GitHubLanguage(name: "Swift")
         model.applyQualifiers(q)
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() != nil)
 
         model.applyQualifiers(.empty)
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(store.load() == nil)
     }
@@ -199,11 +198,11 @@ struct RepositorySearchModelPersistenceTests {
         var q = RepositorySearchQualifiers.empty
         q.language = GitHubLanguage(name: "Swift")
         model.applyQualifiers(q)
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() != nil)
 
         model.removeChip(.language(label: "Swift"))
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(store.load() == nil)
     }
@@ -211,11 +210,11 @@ struct RepositorySearchModelPersistenceTests {
     @Test func sortReturnsToDefault_withEmptyQualifiers_clearsSnapshot() async {
         let (model, _, store, _) = makeSUT()
         model.setSort(RepositorySearchSort(key: .updated, order: .asc))
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() != nil)
 
         model.setSort(.default)
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(store.load() == nil)
     }
@@ -226,11 +225,11 @@ struct RepositorySearchModelPersistenceTests {
         let (model, _, store, _) = makeSUT()
 
         model.query = "swift"
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() == nil)
 
         model.query = ""
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() == nil)
     }
 
@@ -251,12 +250,12 @@ struct RepositorySearchModelPersistenceTests {
             searchResult: .success(.init(repositories: page1, totalCount: 100, incompleteResults: false))
         )
         model.query = "swift"
-        await waitTick()
+        await waitForInflight(model)
         #expect(store.load() == nil) // キーワード変更だけでは保存しない
 
         await mock.setSearchResult(.success(.init(repositories: page1, totalCount: 100, incompleteResults: false)))
         model.loadNextPageIfNeeded()
-        await waitTick()
+        await waitForInflight(model)
 
         #expect(store.load() == nil)
     }
