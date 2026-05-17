@@ -40,13 +40,20 @@ final class RepositorySearchModel {
     private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
     private let debounceDuration: Duration
+    private let conditionStore: RepositorySearchConditionStore
 
     init(
         repository: GithubRepoRepositoryProtocol = GithubRepoRepository(),
-        debounceDuration: Duration = .milliseconds(300)
+        debounceDuration: Duration = .milliseconds(300),
+        conditionStore: RepositorySearchConditionStore = RepositorySearchConditionStore()
     ) {
         self.repository = repository
         self.debounceDuration = debounceDuration
+        self.conditionStore = conditionStore
+        if let snapshot = conditionStore.load() {
+            self.appliedQualifiers = snapshot.qualifiers
+            self.sort = snapshot.sort
+        }
     }
 
     var chips: [RepositorySearchChip] {
@@ -75,12 +82,14 @@ final class RepositorySearchModel {
     func applyQualifiers(_ qualifiers: RepositorySearchQualifiers) {
         guard qualifiers.isValid else { return }
         appliedQualifiers = qualifiers
+        persistConditionIfNeeded()
         fireSearch(debounce: false)
     }
 
     func setSort(_ sort: RepositorySearchSort) {
         guard self.sort != sort else { return }
         self.sort = sort
+        persistConditionIfNeeded()
         if hasActiveCondition {
             fireSearch(debounce: false)
         }
@@ -112,6 +121,7 @@ final class RepositorySearchModel {
             q.topics.removeAll { $0 == value }
         }
         appliedQualifiers = q
+        persistConditionIfNeeded()
         fireSearch(debounce: false)
     }
 
@@ -260,5 +270,15 @@ final class RepositorySearchModel {
     private func cancelCurrentTask() {
         currentTask?.cancel()
         currentTask = nil
+    }
+
+    private func persistConditionIfNeeded() {
+        if appliedQualifiers.isEmpty && sort == .default {
+            conditionStore.clear()
+        } else {
+            conditionStore.save(
+                RepositorySearchConditionSnapshot(qualifiers: appliedQualifiers, sort: sort)
+            )
+        }
     }
 }

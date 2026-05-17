@@ -3,6 +3,7 @@ import Testing
 @testable import github_client_swiftui
 
 @MainActor
+@Suite(.serialized)
 struct RepositorySearchModelTests {
 
     // MARK: - Helpers
@@ -14,9 +15,14 @@ struct RepositorySearchModelTests {
         let mock = MockGithubRepoRepository(
             searchResult: searchResult ?? .success(.init(repositories: GitHubRepo.samples, totalCount: GitHubRepo.samples.count, incompleteResults: false))
         )
+        let suiteName = "RepositorySearchModelTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let store = RepositorySearchConditionStore(defaults: defaults)
         let model = RepositorySearchModel(
             repository: mock,
-            debounceDuration: debounceDuration
+            debounceDuration: debounceDuration,
+            conditionStore: store
         )
         return (model, mock)
     }
