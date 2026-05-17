@@ -6,17 +6,23 @@ nonisolated protocol HttpClient: Sendable {
 
 nonisolated enum ApiHost: Sendable {
     case github
+    /// テスト等で任意のホストを差し込むためのケース。production コードでは使わない。
+    case custom(URL)
 
     var baseURL: URL {
         switch self {
         case .github:
             URL(string: "https://api.github.com")!
+        case let .custom(url):
+            url
         }
     }
 
     var defaultHeaders: [String: String] {
         switch self {
         case .github:
+            ["Accept": "application/vnd.github.v3+json"]
+        case .custom:
             ["Accept": "application/vnd.github.v3+json"]
         }
     }

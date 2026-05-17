@@ -76,7 +76,7 @@
 - テスト名は **PRD の AC を写したもの** にする。「<入力 / 操作> したとき <観測可能な結果> になる」形式。実装の都合（メソッド名）で名付けない。
 - **TDD を緩めてよいケース**: View の構造、`#Preview` 自体、Apple フレームワーク素の挙動の確認のみのコード。緩める判断をしたら、その理由を 1 行で残す。
 - Mock 化は既存の `Common/Repository/MockGithubRepoRepository.swift` 等のパターンを踏襲する。新規 Mock を導入する前に既存を読む。
-- **stub state の競合に注意**（`docs/pitfalls/testing.md`）。`URLSessionHttpClientTests` 系では `@Suite(.serialized)` で逐次実行している。同様の static stub を新規に作るときは並列実行下のレースを設計時点で潰す。
+- **stub state の競合に注意**（`docs/pitfalls/testing.md`）。`StubURLProtocol` はテストごとに固有ホスト (`test-{UUID}.invalid`) を払い出して responder を分離している。新規に static / global state を持つ stub を作るときは、同様にテストインスタンス単位で key を分けて並列実行下のレースを設計時点で潰す。
 - **`Task.sleep` で完了を待つテストを書かない**。Model 内 Task の完了を待ちたいときは、Model に inflight Task を読める read-only プロパティを生やし `await task?.value` で待つ。`await` できない callback 経由なら `Confirmation` を使う。`Task.sleep` ベースの待機は「何も起きないこと」「debounce 等の本質的に時間経過を見たい」場合にだけ使う。詳細は `docs/pitfalls/testing.md`。
 - **`@Suite(.serialized)` は最終手段**。先に「(1) 完了を await できる経路を作る、(2) Confirmation、(3) テスト固有の独立リソース (UserDefaults suiteName など)、(4) Mock の actor → ロック化」を検討する。それでも解決できない（`StubURLProtocol` の static state のように根本書き換えが大コスト等）ケースに限って暫定的に貼る。詳細は `docs/pitfalls/testing.md`。
 - 新規追加した Observable Model / Repository / Mapper のテストは、PRD §3 の AC と PRD §9 の検証要件に **1 対 1 で対応** させる。

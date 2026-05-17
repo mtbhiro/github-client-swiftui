@@ -1,39 +1,49 @@
 # テスト周りの落とし穴
 
-## `URLSessionHttpClientTests` を `@Suite(.serialized)` で逐次実行している
+## `URLSessionHttpClientTests` の `StubURLProtocol` をテストごとの固有ホストで分離している
 
-### 症状
+### 過去にあった症状
 
-`URLSessionHttpClientTests` を Swift Testing デフォルトの並列実行で走らせると、複数テストが同時に動いた際に以下のいずれかが起きる:
+以前は `StubURLProtocol` がレスポンス情報（`stubbedData` / `stubbedStatusCode` / `stubbedError` / `stubbedDelay` / `onRequest`）を `nonisolated(unsafe) static var` でプロセス全体に共有していた。Swift Testing は同一 suite 内のテストを並列実行するため、複数テストが同時に static state を読み書きしてレースが発生し、以下のいずれかが起きていた:
 
 - 期待した stub と異なるレスポンスが返ってきて assertion が失敗する（例: 別テスト用の `403 / 33 bytes` が読まれる）
-- `Crash: github-client-swiftui at outlined consume of Data._Representation` で abort する
+- `Crash: github-client-swiftui at outlined consume of Data._Representation` で abort する（`Data` の COW 内部表現が破壊レベルで壊れる）
 
-### 原因
+これを `@Suite(.serialized)` で逐次実行することで暫定回避していた。
 
-テスト用の `StubURLProtocol` (`URLSessionHttpClientTests.swift` 末尾) が `nonisolated(unsafe) static var` でレスポンス情報（`stubbedData` / `stubbedStatusCode` / `stubbedError` / `stubbedDelay` / `onRequest`）をプロセス全体で共有している。Swift Testing は同一 suite 内のテストを並列実行するため、複数テストが同時に static state を読み書きしてレースが発生する。
+### 採用している設計（現状）
 
-`Data` の COW 内部表現が破壊レベルで壊れたケースが `Data._Representation` クラッシュ。壊れずに値だけ混線したケースが「stub が他テストの値を返す」現象。
+`StubURLProtocol` の static state を撤廃し、テストインスタンスごとに分離した responder を持つ:
 
-### 暫定対応（現状）
+- responder は global registry (`OSAllocatedUnfairLock<[String: Responder]>` で守られた map) に置く
+- テストごとに固有のホスト名 (`test-{UUID}.invalid`) を払い出す `StubURLProtocol.Handle` を介して responder を更新する
+- `canInit(with:)` で `request.url?.host` を registry で引き、登録済みホストのときだけ true を返す
+- production 側は `ApiHost.custom(URL)` ケースを追加して、テストでは `HttpRequest(host: stub.apiHost, ...)` で固有ホストに差し替える
 
-`@Suite(.serialized)` を付けて URLSessionHttpClientTests を逐次実行している。10 件程度なので体感差は小さい。
+```swift
+@Test func send_success_decodesResponse() async throws {
+    let (client, stub) = makeSUT()
+    stub.respond(data: json, statusCode: 200)
+    let request = HttpRequest(host: stub.apiHost, path: "/search/repositories")
+    let result: SampleResponse = try await client.send(request)
+    // テスト B が並列に走っても stub.apiHost が固有ホストなので干渉しない
+}
+```
 
-### 本来あるべき設計
+この設計により `@Suite(.serialized)` を撤去し、並列実行下で 99 件のテストが安定して通る。`StubURLProtocol` の `@unchecked Sendable` も撤去できた（responder へのアクセスがすべて `OSAllocatedUnfairLock` 経由になったため `Sendable` が素直に得られる）。
 
-stub state を **テストインスタンスごと**に持つ形に作り替える。具体案:
+### 設計判断のメモ
 
-- `StubURLProtocol` から static state を撤廃し、`Synchronization.Mutex` で守られた global `[Key: StubResponder]` map を介してインスタンス単位で responder を解決する
-- テストごとに固有のホスト（例: `https://test-{UUID}.invalid/...`）を使い、`startLoading()` 内では `request.url?.host` をキーに responder を取得
-- production の `ApiHost` を DI 化し、テストではテスト専用ホストに差し替える
-
-これをやれば `.serialized` を外しても動く。`MockGithubRepoRepository` の `@unchecked Sendable` も同様の問題を抱えており、合わせて見直す価値がある（プロジェクトポリシーは `@unchecked Sendable` 禁止）。
+- **なぜ `Synchronization.Mutex` ではなく `OSAllocatedUnfairLock` か**: `Mutex` は iOS 18+。本プロジェクトは iOS 17 ターゲットなので使えない。`OSAllocatedUnfairLock` は iOS 16+ で利用可能。
+- **なぜ `URLSession` 単位の DI ではなく registry を使うか**: `URLProtocol` のサブクラスは `URLSession` の `protocolClasses` で指定するが、`URLProtocol` 自体は class メソッド (`canInit(with:)` / `startLoading()`) を介してインスタンスを作るため、`URLSession` インスタンス単位の context を渡せない。`request.url?.host` をキーに global registry を引くのが妥当。
+- **テスト終了時の unregister**: テスト関数が `struct` なので `deinit` は使えない。本実装では `register()` が払い出した固有ホストを registry に登録したままにする（プロセス終了でクリアされる）。テスト数が爆発的に増えてメモリが気になる場合は `defer { StubURLProtocol.unregister(stub) }` を helper に組み込む。
 
 ### 一次ソース
 
 - [Swift Testing — `Suite`](https://developer.apple.com/documentation/testing/suite) — Suite 内テストはデフォルトで並列実行される
 - [Swift Testing — `Trait/serialized`](https://developer.apple.com/documentation/testing/trait/serialized) — `.serialized` で逐次実行を強制
-- [Swift Evolution SE-0433 — Synchronous Mutual Exclusion Lock](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0433-mutex.md) — `Synchronization.Mutex` の導入提案
+- [`OSAllocatedUnfairLock`](https://developer.apple.com/documentation/os/osallocatedunfairlock) — iOS 16+ で使える Sendable な lock
+- [Swift Evolution SE-0433 — Synchronous Mutual Exclusion Lock](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0433-mutex.md) — `Synchronization.Mutex`（iOS 18+ 必須のため本プロジェクトでは未採用）
 
 ## `Task.sleep` で完了を待つテストが並列度で破綻する
 
