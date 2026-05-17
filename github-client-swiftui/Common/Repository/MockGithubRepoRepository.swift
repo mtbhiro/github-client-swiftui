@@ -3,6 +3,7 @@ import Foundation
 actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
     var searchResult: Result<RepositorySearchPageResult, Error>
     var searchResultHandler: (@Sendable (String, String?, String?, Int) -> Result<RepositorySearchPageResult, Error>)?
+    var searchAsyncHandler: (@Sendable (String, String?, String?, Int) async throws -> RepositorySearchPageResult)?
     var fetchResult: Result<GitHubRepoDetail, Error>
     var issuesResult: Result<[GitHubIssue], Error>
     var issuesResultHandler: (@Sendable (GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
@@ -38,6 +39,10 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
         searchResultHandler = handler
     }
 
+    func setSearchAsyncHandler(_ handler: (@Sendable (String, String?, String?, Int) async throws -> RepositorySearchPageResult)?) {
+        searchAsyncHandler = handler
+    }
+
     func setIssuesResult(_ result: Result<[GitHubIssue], Error>) {
         issuesResult = result
     }
@@ -69,6 +74,9 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
         lastSort = sort
         lastOrder = order
         lastPage = page
+        if let handler = searchAsyncHandler {
+            return try await handler(query, sort, order, page)
+        }
         if let handler = searchResultHandler {
             return try handler(query, sort, order, page).get()
         }

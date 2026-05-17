@@ -3,9 +3,13 @@ import SwiftUI
 struct RepositorySearchView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var bookmarkStore
-    @State private var model = RepositorySearchModel()
+    @State private var model: RepositorySearchModel
     @State private var isShowingFilters = false
     @FocusState private var isQueryFieldFocused: Bool
+
+    init(cache: RepositorySearchCache) {
+        _model = State(initialValue: RepositorySearchModel(cache: cache))
+    }
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -46,25 +50,31 @@ struct RepositorySearchView: View {
 
                 Divider()
 
+                // loaded / pagingLoading / pagingError は同一 List で扱い、Group switch の case 切替で
+                // View identity が分かれてスクロール位置がリセットされるのを防ぐ。
                 Group {
-                    switch model.phase {
-                    case .idle:
-                        idlePlaceholder
-                    case .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    case let .loaded(state):
-                        repositoryList(state, isPagingLoading: false, isPagingError: false)
-                    case let .pagingLoading(state):
-                        repositoryList(state, isPagingLoading: true, isPagingError: false)
-                    case let .pagingError(state):
-                        repositoryList(state, isPagingLoading: false, isPagingError: true)
-                    case let .noResults(q):
-                        noResultsView(query: q)
-                    case .errorNetwork:
-                        errorNetworkView
-                    case let .errorRateLimited(resetDate):
-                        errorRateLimitedView(resetDate: resetDate)
+                    if let listState = model.phase.listState {
+                        repositoryList(
+                            listState.state,
+                            isPagingLoading: listState.isPagingLoading,
+                            isPagingError: listState.isPagingError
+                        )
+                    } else {
+                        switch model.phase {
+                        case .idle:
+                            idlePlaceholder
+                        case .loading:
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        case let .noResults(q):
+                            noResultsView(query: q)
+                        case .errorNetwork:
+                            errorNetworkView
+                        case let .errorRateLimited(resetDate):
+                            errorRateLimitedView(resetDate: resetDate)
+                        case .loaded, .pagingLoading, .pagingError:
+                            EmptyView() // 上の if 分岐でハンドル済み
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -298,7 +308,7 @@ struct RepositorySearchView: View {
 }
 
 #Preview("idle") {
-    RepositorySearchView()
+    RepositorySearchView(cache: RepositorySearchCache())
         .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
 }
