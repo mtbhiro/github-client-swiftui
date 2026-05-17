@@ -41,17 +41,8 @@ struct RepositorySearchSortMenu: View {
     }
 
     private var summary: String {
-        let keyName: String
-        switch current.key {
-        case .stars: keyName = "stars"
-        case .updated: keyName = "updated"
-        }
-        let orderName: String
-        switch current.order {
-        case .asc: orderName = "↑"
-        case .desc: orderName = "↓"
-        }
-        return "\(keyName) \(orderName)"
+        let arrow = current.order == .asc ? "↑" : "↓"
+        return "\(current.key.rawValue) \(arrow)"
     }
 
     @ViewBuilder

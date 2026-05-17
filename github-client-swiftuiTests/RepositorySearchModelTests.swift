@@ -46,18 +46,19 @@ struct RepositorySearchModelTests {
         let (model, mock) = makeSUT()
         await waitTick()
         #expect(model.phase == .idle)
-        #expect(mock.searchCallCount == 0)
+        await #expect(mock.searchCallCount == 0)
     }
 
     @Test func typingQuery_afterDebounce_fires_loading_thenLoaded() async {
         let (model, mock) = makeSUT(debounceDuration: .milliseconds(100))
         model.query = "swift"
         // 入力直後はまだ API 未発火、ただし loading に切り替わる
+        // (前の結果を即時クリアして loading 画面に切り替える PRD §4.2 の意図)
         #expect(model.phase == .loading)
         await waitTick(50)
-        #expect(mock.searchCallCount == 0)
+        await #expect(mock.searchCallCount == 0)
         await waitTick(100)
-        #expect(mock.searchCallCount == 1)
+        await #expect(mock.searchCallCount == 1)
         guard case let .loaded(state) = model.phase else {
             Issue.record("Expected loaded phase")
             return
@@ -71,10 +72,10 @@ struct RepositorySearchModelTests {
         model.query = "sw"
         model.query = "swi"
         await waitTick(50)
-        #expect(mock.searchCallCount == 0)
+        await #expect(mock.searchCallCount == 0)
         await waitTick(100)
-        #expect(mock.searchCallCount == 1)
-        #expect(mock.lastQuery == "swi")
+        await #expect(mock.searchCallCount == 1)
+        await #expect(mock.lastQuery == "swi")
     }
 
     @Test func emptyResult_transitionsToNoResults() async {
@@ -106,12 +107,12 @@ struct RepositorySearchModelTests {
         model.query = "ui"
         await waitTick()
 
-        let baseline = mock.searchCallCount
+        let baseline = await mock.searchCallCount
         model.applyQualifiers(q)
         await waitTick()
 
-        #expect(mock.searchCallCount == baseline + 1)
-        #expect(mock.lastQuery?.contains("language:Swift") == true)
+        await #expect(mock.searchCallCount == baseline + 1)
+        await #expect(mock.lastQuery?.contains("language:Swift") == true)
         #expect(model.appliedQualifiers.language == GitHubLanguage(name: "Swift"))
     }
 
@@ -124,11 +125,11 @@ struct RepositorySearchModelTests {
         model.applyQualifiers(q)
         await waitTick()
 
-        let baseline = mock.searchCallCount
+        let baseline = await mock.searchCallCount
         model.removeChip(.language(label: "Swift"))
         await waitTick()
 
-        #expect(mock.searchCallCount == baseline + 1)
+        await #expect(mock.searchCallCount == baseline + 1)
         #expect(model.appliedQualifiers.language == nil)
     }
 
@@ -157,20 +158,20 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         await waitTick()
 
-        let baseline = mock.searchCallCount
+        let baseline = await mock.searchCallCount
         model.setSort(.init(key: .updated, order: .desc))
         #expect(model.phase == .loading)
         await waitTick()
 
-        #expect(mock.searchCallCount == baseline + 1)
-        #expect(mock.lastSort == "updated")
+        await #expect(mock.searchCallCount == baseline + 1)
+        await #expect(mock.lastSort == "updated")
     }
 
     @Test func changingSort_withEmptyQueryAndNoQualifiers_doesNotFire() async {
         let (model, mock) = makeSUT()
         model.setSort(.init(key: .updated, order: .asc))
         await waitTick()
-        #expect(mock.searchCallCount == 0)
+        await #expect(mock.searchCallCount == 0)
         #expect(model.phase == .idle)
     }
 
@@ -196,7 +197,7 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         await waitTick()
 
-        mock.searchResult = .success(.init(repositories: page2, totalCount: 40, incompleteResults: false))
+        await mock.setSearchResult(.success(.init(repositories: page2, totalCount: 40, incompleteResults: false)))
         model.loadNextPageIfNeeded()
         await waitTick()
 
@@ -206,19 +207,20 @@ struct RepositorySearchModelTests {
         }
         #expect(state.repositories.count == 40)
         #expect(state.hasMorePages == false)
-        #expect(mock.lastPage == 2)
+        await #expect(mock.lastPage == 2)
     }
 
-    @Test func loadNextPage_isCappedAt1000Items() async {
-        // 33 ページ目で 30 件返し続けるケース。990 件まで読み、1000 件にあと 10 件で達するシナリオ。
+    @Test func loadNextPage_isCappedAt1000Items_andStopsRequestingFurther() async {
+        // 各ページが 30 件返り続けるシナリオ。
+        // 1 ページ目 (30 件) → ページング 33 回で 30 * 34 = 1020 件 → cap で 1000 件に切られる。
+        // cap に達した時点で hasMorePages が false になり、それ以上のページング要求は発生しない (AC-4.4)。
         let page = makeRepos(count: 30, startId: 1)
         let (model, mock) = makeSUT(searchResult: .success(.init(repositories: page, totalCount: 100000, incompleteResults: false)))
         model.query = "swift"
         await waitTick()
 
-        // page2..page33 を 32 回読む
         for i in 2...34 {
-            mock.searchResult = .success(.init(repositories: makeRepos(count: 30, startId: i * 100), totalCount: 100000, incompleteResults: false))
+            await mock.setSearchResult(.success(.init(repositories: makeRepos(count: 30, startId: i * 100), totalCount: 100000, incompleteResults: false)))
             model.loadNextPageIfNeeded()
             await waitTick(20)
         }
@@ -227,8 +229,14 @@ struct RepositorySearchModelTests {
             Issue.record("Expected loaded phase")
             return
         }
-        #expect(state.repositories.count <= 1000)
+        #expect(state.repositories.count == RepositorySearchModel.maxAccumulated)
         #expect(state.hasMorePages == false)
+
+        // cap 後にさらに loadNextPageIfNeeded を呼んでも API は呼ばれない
+        let callsBefore = await mock.searchCallCount
+        model.loadNextPageIfNeeded()
+        await waitTick(20)
+        await #expect(mock.searchCallCount == callsBefore)
     }
 
     @Test func loadNextPage_failure_keepsExistingResults_andShowsRetry() async {
@@ -237,7 +245,7 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         await waitTick()
 
-        mock.searchResult = .failure(URLError(.notConnectedToInternet))
+        await mock.setSearchResult(.failure(URLError(.notConnectedToInternet)))
         model.loadNextPageIfNeeded()
         await waitTick()
 
@@ -254,12 +262,12 @@ struct RepositorySearchModelTests {
         model.query = "swift"
         await waitTick()
 
-        mock.searchResult = .failure(URLError(.notConnectedToInternet))
+        await mock.setSearchResult(.failure(URLError(.notConnectedToInternet)))
         model.loadNextPageIfNeeded()
         await waitTick()
 
         let recoveryPage = makeRepos(count: 10, startId: 31)
-        mock.searchResult = .success(.init(repositories: recoveryPage, totalCount: 100, incompleteResults: false))
+        await mock.setSearchResult(.success(.init(repositories: recoveryPage, totalCount: 100, incompleteResults: false)))
         model.retryPaging()
         await waitTick()
 
@@ -268,7 +276,7 @@ struct RepositorySearchModelTests {
             return
         }
         #expect(state.repositories.count == 40)
-        #expect(mock.lastPage == 2)
+        await #expect(mock.lastPage == 2)
     }
 
     @Test func newSearch_resetsPagination() async {
@@ -278,7 +286,7 @@ struct RepositorySearchModelTests {
         await waitTick()
 
         let newPage1 = makeRepos(count: 5, startId: 100)
-        mock.searchResult = .success(.init(repositories: newPage1, totalCount: 5, incompleteResults: false))
+        await mock.setSearchResult(.success(.init(repositories: newPage1, totalCount: 5, incompleteResults: false)))
         model.query = "rust"
         await waitTick()
 
@@ -287,7 +295,7 @@ struct RepositorySearchModelTests {
             return
         }
         #expect(state.repositories.count == 5)
-        #expect(mock.lastPage == 1)
+        await #expect(mock.lastPage == 1)
     }
 
     // MARK: - US-5: 異常系
@@ -336,7 +344,7 @@ struct RepositorySearchModelTests {
         await waitTick()
         #expect(model.phase == .errorNetwork)
 
-        mock.searchResult = .success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false))
+        await mock.setSearchResult(.success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false)))
         model.retry()
         await waitTick()
 
@@ -353,7 +361,7 @@ struct RepositorySearchModelTests {
         await waitTick()
         #expect(model.phase == .errorNetwork)
 
-        mock.searchResult = .success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false))
+        await mock.setSearchResult(.success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false)))
         model.query = "rust"
         // 即時 loading に
         #expect(model.phase == .loading)

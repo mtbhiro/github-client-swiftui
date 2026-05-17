@@ -8,7 +8,7 @@ struct RepositoryRow: View {
             avatar
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(verbatim: String(describing: repository.fullName))
+                Text(verbatim: repository.fullName.description)
                     .font(.headline)
                     .lineLimit(1)
 

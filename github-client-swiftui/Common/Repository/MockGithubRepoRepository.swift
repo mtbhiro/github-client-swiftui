@@ -1,11 +1,11 @@
 import Foundation
 
-nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, @unchecked Sendable {
+actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
     var searchResult: Result<RepositorySearchPageResult, Error>
-    var searchResultHandler: ((String, String?, String?, Int) -> Result<RepositorySearchPageResult, Error>)?
+    var searchResultHandler: (@Sendable (String, String?, String?, Int) -> Result<RepositorySearchPageResult, Error>)?
     var fetchResult: Result<GitHubRepoDetail, Error>
     var issuesResult: Result<[GitHubIssue], Error>
-    var issuesResultHandler: ((GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
+    var issuesResultHandler: (@Sendable (GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
     var issueDetailResult: Result<GitHubIssueDetail, Error>
     var issueCommentsResult: Result<[GitHubIssueComment], Error>
     private(set) var searchCallCount = 0
@@ -28,6 +28,34 @@ nonisolated final class MockGithubRepoRepository: GithubRepoRepositoryProtocol, 
         self.issuesResult = issuesResult
         self.issueDetailResult = issueDetailResult
         self.issueCommentsResult = issueCommentsResult
+    }
+
+    func setSearchResult(_ result: Result<RepositorySearchPageResult, Error>) {
+        searchResult = result
+    }
+
+    func setSearchResultHandler(_ handler: (@Sendable (String, String?, String?, Int) -> Result<RepositorySearchPageResult, Error>)?) {
+        searchResultHandler = handler
+    }
+
+    func setIssuesResult(_ result: Result<[GitHubIssue], Error>) {
+        issuesResult = result
+    }
+
+    func setIssuesResultHandler(_ handler: (@Sendable (GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?) {
+        issuesResultHandler = handler
+    }
+
+    func setFetchResult(_ result: Result<GitHubRepoDetail, Error>) {
+        fetchResult = result
+    }
+
+    func setIssueDetailResult(_ result: Result<GitHubIssueDetail, Error>) {
+        issueDetailResult = result
+    }
+
+    func setIssueCommentsResult(_ result: Result<[GitHubIssueComment], Error>) {
+        issueCommentsResult = result
     }
 
     func searchRepositories(

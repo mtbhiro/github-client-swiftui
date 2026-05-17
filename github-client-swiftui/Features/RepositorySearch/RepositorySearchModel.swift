@@ -23,16 +23,19 @@ final class RepositorySearchModel {
     var query: String = "" {
         didSet {
             guard query != oldValue else { return }
+            guard !suppressQueryDidSet else { return }
             onQueryChanged()
         }
     }
+
+    private var suppressQueryDidSet = false
 
     private(set) var phase: RepositorySearchPhase = .idle
     private(set) var appliedQualifiers: RepositorySearchQualifiers = .empty
     private(set) var sort: RepositorySearchSort = .default
 
-    private static let perPage = 30
-    private static let maxAccumulated = 1000
+    static let perPage = 30
+    static let maxAccumulated = 1000
 
     private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
@@ -84,10 +87,18 @@ final class RepositorySearchModel {
     }
 
     func removeChip(_ chip: RepositorySearchChip) {
+        if case .keyword = chip {
+            // keyword 削除も他のチップ削除と同じく即時再検索する。
+            // query の didSet 経由（debounce: true）と挙動を分けないため、
+            // 一旦 didSet を抑止して値だけ更新し、明示的に fireSearch(debounce: false) を呼ぶ。
+            setQueryWithoutFiring("")
+            fireSearch(debounce: false)
+            return
+        }
+
         var q = appliedQualifiers
         switch chip {
         case .keyword:
-            query = ""
             return
         case .inTargets:
             q.inTargets = []
@@ -102,6 +113,12 @@ final class RepositorySearchModel {
         }
         appliedQualifiers = q
         fireSearch(debounce: false)
+    }
+
+    private func setQueryWithoutFiring(_ newValue: String) {
+        suppressQueryDidSet = true
+        query = newValue
+        suppressQueryDidSet = false
     }
 
     // MARK: - Pagination
@@ -138,45 +155,47 @@ final class RepositorySearchModel {
         let sortKey = sort.key.rawValue
         let orderKey = sort.order.rawValue
 
+        // debounce 中も loading 状態にして、前の結果が一瞬残るのを防ぐ。
+        // ユーザー操作直後に常に「クリアされた loading 画面」が見える状態を作る。
         phase = .loading
-
-        let repository = self.repository
-        let debounceDuration = self.debounceDuration
 
         currentTask = Task { [weak self] in
             do {
-                if debounce {
-                    try await Task.sleep(for: debounceDuration)
+                if debounce, let duration = self?.debounceDuration {
+                    try await Task.sleep(for: duration)
                 }
-                let result = try await repository.searchRepositories(
+                guard let self else { return }
+                let result = try await self.repository.searchRepositories(
                     query: qString,
                     sort: sortKey,
                     order: orderKey,
                     page: 1
                 )
-                guard let self else { return }
+                try Task.checkCancellation()
                 if result.repositories.isEmpty {
                     self.phase = .noResults(query: trimmed)
                 } else {
-                    let capped = self.cap(result.repositories, currentCount: 0)
+                    let capped = Self.cap(existing: [], appending: result.repositories)
                     self.phase = .loaded(.init(
                         repositories: capped.list,
                         nextPage: 2,
-                        hasMorePages: capped.list.count < Self.maxAccumulated
-                            && result.repositories.count >= Self.perPage
+                        hasMorePages: Self.shouldKeepPaging(
+                            reachedCap: capped.reachedCap,
+                            lastPageCount: result.repositories.count
+                        )
                     ))
                 }
             } catch is CancellationError {
                 return
             } catch {
                 guard let self else { return }
-                if let mapped = RepositorySearchErrorMapper.map(error) {
-                    switch mapped {
-                    case .network:
-                        self.phase = .errorNetwork
-                    case let .rateLimited(resetDate):
-                        self.phase = .errorRateLimited(resetDate: resetDate)
-                    }
+                switch RepositorySearchErrorMapper.map(error) {
+                case .none:
+                    return
+                case .network?:
+                    self.phase = .errorNetwork
+                case let .rateLimited(resetDate)?:
+                    self.phase = .errorRateLimited(resetDate: resetDate)
                 }
             }
         }
@@ -193,25 +212,24 @@ final class RepositorySearchModel {
 
         phase = .pagingLoading(state)
 
-        let repository = self.repository
-
         currentTask = Task { [weak self] in
             do {
-                let result = try await repository.searchRepositories(
+                guard let self else { return }
+                let result = try await self.repository.searchRepositories(
                     query: qString,
                     sort: sortKey,
                     order: orderKey,
                     page: nextPage
                 )
-                guard let self else { return }
-                let merged = state.repositories + result.repositories
-                let capped = self.cap(merged, currentCount: 0)
-                let reachedCap = capped.list.count >= Self.maxAccumulated
-                let lastWasFull = result.repositories.count >= Self.perPage
+                try Task.checkCancellation()
+                let capped = Self.cap(existing: state.repositories, appending: result.repositories)
                 self.phase = .loaded(.init(
                     repositories: capped.list,
                     nextPage: nextPage + 1,
-                    hasMorePages: !reachedCap && lastWasFull
+                    hasMorePages: Self.shouldKeepPaging(
+                        reachedCap: capped.reachedCap,
+                        lastPageCount: result.repositories.count
+                    )
                 ))
             } catch is CancellationError {
                 return
@@ -222,11 +240,21 @@ final class RepositorySearchModel {
         }
     }
 
-    private func cap(_ repos: [GitHubRepo], currentCount: Int) -> (list: [GitHubRepo], didCap: Bool) {
-        if repos.count <= Self.maxAccumulated {
-            return (repos, false)
+    private static func cap(
+        existing: [GitHubRepo],
+        appending: [GitHubRepo]
+    ) -> (list: [GitHubRepo], reachedCap: Bool) {
+        let merged = existing + appending
+        if merged.count >= maxAccumulated {
+            return (Array(merged.prefix(maxAccumulated)), true)
         }
-        return (Array(repos.prefix(Self.maxAccumulated)), true)
+        return (merged, false)
+    }
+
+    private static func shouldKeepPaging(reachedCap: Bool, lastPageCount: Int) -> Bool {
+        // 1000 件 cap に達した時点で、それ以上のページング要求は発生させない (AC-4.4)。
+        // それ未満でも、最後のレスポンスが per_page 未満なら次ページは存在しないと判断する。
+        !reachedCap && lastPageCount >= perPage
     }
 
     private func cancelCurrentTask() {

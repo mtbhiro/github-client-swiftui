@@ -6,13 +6,10 @@ nonisolated enum RepositorySearchError: Error, Equatable, Sendable {
 }
 
 nonisolated enum RepositorySearchErrorMapper {
+    /// 取得時のエラーを UI 用のエラー種別にマップする。
+    /// `nil` を返した場合は「キャンセル相当」を意味し、UI に何も表示しない (PRD §4.3.2)。
     static func map(_ error: Error) -> RepositorySearchError? {
-        if error is CancellationError { return nil }
-
-        if let urlError = error as? URLError {
-            if urlError.code == .cancelled { return nil }
-            return .network
-        }
+        if isCancelled(error) { return nil }
 
         if let httpError = error as? HttpClientError {
             switch httpError {
@@ -32,7 +29,23 @@ nonisolated enum RepositorySearchErrorMapper {
             }
         }
 
+        if error is URLError {
+            return .network
+        }
+
         return .network
+    }
+
+    /// `CancellationError` または `URLError(.cancelled)`（`HttpClientError.networkError` でラップされている場合も含む）を一括判定する。
+    private static func isCancelled(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        if let httpError = error as? HttpClientError,
+           case let .networkError(urlError) = httpError,
+           urlError.code == .cancelled {
+            return true
+        }
+        return false
     }
 
     private static func isRateLimited(_ headers: [String: String]) -> Bool {

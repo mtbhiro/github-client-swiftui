@@ -21,7 +21,10 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         do {
             (data, response) = try await session.data(for: urlRequest)
         } catch let error as URLError {
-            if error.code == .cancelled {
+            // URLError(.cancelled) のうち、Task キャンセル起因のものだけを `CancellationError` に倒す。
+            // 一方、URLSession 側の意図的キャンセル (Task はキャンセルされていないのに `.cancelled` が来る) は
+            // ネットワーク異常として扱い、Mapper の判断対象に残す。
+            if error.code == .cancelled, Task.isCancelled {
                 throw CancellationError()
             }
             throw HttpClientError.networkError(error)

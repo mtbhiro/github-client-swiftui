@@ -187,7 +187,7 @@ struct RepositorySearchView: View {
             if state.hasMorePages || isPagingLoading || isPagingError {
                 listFooter(isPagingLoading: isPagingLoading, isPagingError: isPagingError, hasMorePages: state.hasMorePages)
                     .listRowSeparator(.hidden)
-            } else if state.repositories.count >= 1000 {
+            } else if state.repositories.count >= RepositorySearchModel.maxAccumulated {
                 Text("これ以上の結果は表示できません")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -218,18 +218,28 @@ struct RepositorySearchView: View {
     }
 
     private func repositoryRow(_ repo: GitHubRepo) -> some View {
-        let item = BookmarkItem.repository(RepositoryBookmark(
+        // ブックマーク有無の判定は BookmarkItem.id (= "repo:<fullName>") で行うため、
+        // createdAt は判定に影響しない。一方、toggle 時に保存される `createdAt` は
+        // 「タップ瞬間の日時」を意味させたいので、描画毎ではなくクロージャ内で生成する。
+        let lookupItem = BookmarkItem.repository(RepositoryBookmark(
             fullName: repo.fullName,
             description: repo.description,
             stargazersCount: repo.stargazersCount,
             language: repo.language,
-            createdAt: Date()
+            createdAt: .distantPast
         ))
         return NavigationLink(value: SearchRoute.repositoryDetail(repo.fullName)) {
             HStack {
                 RepositoryRow(repository: repo)
                 Spacer()
-                BookmarkButton(isBookmarked: bookmarkStore.contains(item)) {
+                BookmarkButton(isBookmarked: bookmarkStore.contains(lookupItem)) {
+                    let item = BookmarkItem.repository(RepositoryBookmark(
+                        fullName: repo.fullName,
+                        description: repo.description,
+                        stargazersCount: repo.stargazersCount,
+                        language: repo.language,
+                        createdAt: Date()
+                    ))
                     bookmarkStore.toggle(item)
                 }
                 .accessibilityIdentifier("BookmarkButton-\(repo.fullName)")
@@ -273,12 +283,18 @@ struct RepositorySearchView: View {
 
     private func formattedResetDate(_ date: Date?) -> String {
         guard let date else { return "時刻不明" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter.string(from: date)
+        return Self.rateLimitResetFormatter.string(from: date)
     }
+
+    private static let rateLimitResetFormatter: DateFormatter = {
+        let f = DateFormatter()
+        // PRD §4.3.2: 端末ローカルタイムゾーンで yyyy-MM-dd HH:mm。
+        // 数字フォーマット固定なので en_US_POSIX を使う。
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f
+    }()
 }
 
 #Preview("idle") {

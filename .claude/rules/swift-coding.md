@@ -5,14 +5,42 @@
 
 > 前提となるプロジェクト規約（対応 OS・採用フレームワーク・状態管理方針など）は **ルート `CLAUDE.md`** と **`github-client-swiftui/docs/requirements.md`** を参照する。本書は「コードを書く・編集する瞬間」に効くルールに絞る。
 
-## 1. 言語・並行性
+## 1. 並行性 (Concurrency)
 
-- **Swift 6 strict concurrency を遵守する**。コンパイル警告も無視しない。
-- `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` が設定済み。**モジュール内の型・関数はデフォルトで `@MainActor`**。明示的な `@MainActor` 付与は不要。バックグラウンド実行が必要な箇所には `nonisolated` を付与する。
-- **`@unchecked Sendable` は使わない**。どうしても必要に見えたら、Mutex / actor / 値型化など別案を先に検討する。判断に迷ったら `github-client-swiftui/docs/guide/sendable-guide.md` を読み返す。
-- actor 境界や Task 境界をまたぐ型は `Sendable` を意識して設計する。
-- **非同期処理は async/await と Task** を使う。コールバック・Combine の `@Published` は採用しない。
-- **Task キャンセルは協調的に扱う**。`CancellationError` をユーザー向けエラーとして表示しない（黙って捨てる）。`await` 後は必要に応じて `Task.checkCancellation()` / `Task.isCancelled` を確認する。
+### 1.1 基本方針
+
+- **Swift 6 strict concurrency を遵守する**。コンパイル警告を残さない。
+- **非同期は async/await と Task** で書く。コールバック・Combine・`@Published` は採用しない。
+- **`@unchecked Sendable` は使わない**（§9 チェックリスト）。
+
+### 1.2 隔離 (isolation) の選び方
+
+`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` 設定済み。**型・関数はデフォルトで `@MainActor`**。
+新しく型を作るときは、まずこの表で何を選ぶか決める。
+
+| 何を作るか | 何を選ぶか |
+|---|---|
+| UI 状態を持つ Observable Model | デフォルトのまま (`@MainActor class` + `@Observable`) |
+| ネットワーク / DB / デコード / 純粋ロジック / DTO / ドメインモデル | `nonisolated` を明示（多くは `struct`） |
+| UI に関係しない共有可変状態（キャッシュ・テスト Mock など） | `actor` |
+
+選び方の原則:
+
+- `@MainActor` の明示は **不要**（デフォルト）。`nonisolated` のほうを明示する。
+- `actor` の採用は **「複数 Task から触る可変状態」が本当にあるとき**だけ。1 Task からしか触らないなら struct か nonisolated class で十分。`actor` のメリット・デメリット・採用判断は `docs/guide/actor-guide.md` を読む。
+- `OSAllocatedUnfairLock` / `Mutex` などのロックプリミティブは、**actor で表現できない理由が明確なときだけ**使う（function coloring を避けたい・同期コンテキストから触りたい等）。
+- `@MainActor` / `nonisolated` の細かい取り回しは `docs/guide/actor-isolation-guide.md`。
+
+### 1.3 Sendable
+
+- actor 境界・Task 境界をまたぐ型は `Sendable` を意識して設計する。
+- 適合に迷ったら `docs/guide/sendable-guide.md`。
+
+### 1.4 Task キャンセル
+
+- **キャンセルは協調的**。`await` 後は必要に応じて `Task.checkCancellation()` / `Task.isCancelled` を確認する。
+- **`CancellationError` はユーザー向けエラーとして表示しない**（黙って捨てる）。
+- 詳細は `docs/guide/task-cancellation-guide.md`。
 
 ## 2. 状態管理・アーキテクチャ
 
@@ -66,6 +94,7 @@
 1. **プロジェクト規約**: ルート `CLAUDE.md`、`github-client-swiftui/docs/requirements.md`、機能別 PRD（`docs/requirements/<slug>.md`）。
 2. **ガイド**: `github-client-swiftui/docs/guide/`
    - `actor-isolation-guide.md` — `@MainActor` / `nonisolated` の取り回し
+   - `actor-guide.md` — 独自 `actor` 型をいつ・なぜ使うか／メリット・デメリット・reentrancy
    - `sendable-guide.md` — `Sendable` の付け方・避け方
    - `task-cancellation-guide.md` — Task キャンセルの伝搬・協調キャンセル
    - `navigation-guide.md` — `NavigationStack` data-driven の組み立て

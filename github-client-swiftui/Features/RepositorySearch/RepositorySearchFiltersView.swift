@@ -192,10 +192,10 @@ private struct OptionalDateRow: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(label)をクリア")
             } else {
-                Button("指定なし") {
+                Button("日付を指定") {
                     selection = Date()
                 }
-                .foregroundStyle(.secondary)
+                .accessibilityLabel("\(label)の日付を指定")
             }
         }
     }
