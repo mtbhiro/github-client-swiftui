@@ -35,49 +35,16 @@ struct RepositorySearchCacheTests {
         RepositorySearchCache.Key(q: q, sort: sort, page: page)
     }
 
-    // MARK: - 命中・失効 (AC-2.1, AC-2.3)
+    // MARK: - 命中 / 未登録
 
-    @Test func get_returnsStoredValue_whenWithinTTL() {
-        let clock = MutableClock(currentDate: Date(timeIntervalSince1970: 1_000_000))
-        let cache = RepositorySearchCache(now: clock.now)
+    @Test func get_returnsStoredValue() {
+        let cache = RepositorySearchCache()
         let key = makeKey()
         let value = makeResult(repoNames: ["a", "b"])
 
         cache.put(key, value: value)
-        let got = cache.get(key)
 
-        #expect(got == value)
-    }
-
-    @Test func get_returnsValue_at60SecondsExactly_isHit() {
-        // AC-2.3: 60 秒以下は命中 (`<= 60` 秒は命中)
-        let clock = MutableClock(currentDate: Date(timeIntervalSince1970: 1_000_000))
-        let cache = RepositorySearchCache(now: clock.now)
-        let key = makeKey()
-        let value = makeResult(repoNames: ["a"])
-
-        cache.put(key, value: value)
-        clock.advance(seconds: 60)
-        let got = cache.get(key)
-
-        #expect(got == value)
-    }
-
-    @Test func get_returnsNil_pastTTL_andDropsEntry() {
-        // AC-2.3: 60 秒超で失効
-        let clock = MutableClock(currentDate: Date(timeIntervalSince1970: 1_000_000))
-        let cache = RepositorySearchCache(now: clock.now)
-        let key = makeKey()
-        let value = makeResult(repoNames: ["a"])
-
-        cache.put(key, value: value)
-        clock.advance(seconds: 60.001)
-        let got = cache.get(key)
-
-        #expect(got == nil)
-        // 失効したエントリは破棄され、時間を戻しても復活しない
-        clock.advance(seconds: -10)
-        #expect(cache.get(key) == nil)
+        #expect(cache.get(key) == value)
     }
 
     @Test func get_returnsNil_forUnknownKey() {
@@ -127,36 +94,63 @@ struct RepositorySearchCacheTests {
         #expect(cache.get(makeKey(page: 2))?.repositories.first?.fullName.name == "p2")
     }
 
-    @Test func putOverwritesSameKey_andRefreshesStoredAt() {
-        let clock = MutableClock(currentDate: Date(timeIntervalSince1970: 1_000_000))
-        let cache = RepositorySearchCache(now: clock.now)
+    @Test func putOverwritesSameKey() {
+        let cache = RepositorySearchCache()
         let key = makeKey()
-
         cache.put(key, value: makeResult(repoNames: ["old"]))
-        clock.advance(seconds: 59)
         cache.put(key, value: makeResult(repoNames: ["new"]))
-        // 上書き時点で stored_at が更新されるので、ここからさらに 60 秒以内なら命中
-        clock.advance(seconds: 60)
 
         #expect(cache.get(key)?.repositories.first?.fullName.name == "new")
     }
 
-    // MARK: - サイズ上限 (§5.4)
+    // MARK: - LRU 退避 (§5.4)
 
-    @Test func capacity_isCappedAt100_andEvictsOldestFirst() {
-        // §5.4: 100 件上限、最も古い stored_at から順に破棄 (FIFO)
-        let clock = MutableClock(currentDate: Date(timeIntervalSince1970: 1_000_000))
-        let cache = RepositorySearchCache(now: clock.now)
-
+    @Test func capacity_isCappedAt100_andEvictsLeastRecentlyUsed_onPut() {
+        let cache = RepositorySearchCache()
         for i in 0..<100 {
             cache.put(makeKey(q: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
-            clock.advance(seconds: 0.001)
         }
-        // 101 件目を投入すると、最古の q0 が evict される
+        // 101 件目を投入 → アクセス順で最古の q0 が退避される
         cache.put(makeKey(q: "q100"), value: makeResult(repoNames: ["r100"]))
 
         #expect(cache.get(makeKey(q: "q0")) == nil)
         #expect(cache.get(makeKey(q: "q1"))?.repositories.first?.fullName.name == "r1")
         #expect(cache.get(makeKey(q: "q100"))?.repositories.first?.fullName.name == "r100")
+    }
+
+    @Test func get_promotesEntryAsRecentlyUsed_andProtectsItFromEviction() {
+        // §5.4: get 成功でアクセス順が更新される
+        let cache = RepositorySearchCache()
+        for i in 0..<100 {
+            cache.put(makeKey(q: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
+        }
+        // q0 を touch して最新化
+        _ = cache.get(makeKey(q: "q0"))
+        // 101 件目を投入 → 今度は q0 ではなく次に古い q1 が退避される
+        cache.put(makeKey(q: "q100"), value: makeResult(repoNames: ["r100"]))
+
+        #expect(cache.get(makeKey(q: "q0"))?.repositories.first?.fullName.name == "r0")
+        #expect(cache.get(makeKey(q: "q1")) == nil)
+    }
+
+    // MARK: - invalidate (§5.7, AC-6.1)
+
+    @Test func invalidate_dropsAllPagesForGivenQAndSort_keepingOthers() {
+        let cache = RepositorySearchCache()
+        let stars = RepositorySearchSort(key: .stars, order: .desc)
+        let updated = RepositorySearchSort(key: .updated, order: .desc)
+
+        cache.put(makeKey(q: "swift", sort: stars, page: 1), value: makeResult(repoNames: ["s1"]))
+        cache.put(makeKey(q: "swift", sort: stars, page: 2), value: makeResult(repoNames: ["s2"]))
+        cache.put(makeKey(q: "swift", sort: updated, page: 1), value: makeResult(repoNames: ["u1"]))
+        cache.put(makeKey(q: "rust", sort: stars, page: 1), value: makeResult(repoNames: ["r1"]))
+
+        cache.invalidate(q: "swift", sort: stars)
+
+        #expect(cache.get(makeKey(q: "swift", sort: stars, page: 1)) == nil)
+        #expect(cache.get(makeKey(q: "swift", sort: stars, page: 2)) == nil)
+        // 別ソート・別クエリは残る
+        #expect(cache.get(makeKey(q: "swift", sort: updated, page: 1))?.repositories.first?.fullName.name == "u1")
+        #expect(cache.get(makeKey(q: "rust", sort: stars, page: 1))?.repositories.first?.fullName.name == "r1")
     }
 }

@@ -207,6 +207,7 @@ struct RepositorySearchView: View {
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
+        .refreshable { await model.refresh() }
     }
 
     @ViewBuilder

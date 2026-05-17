@@ -105,6 +105,17 @@ final class RepositorySearchModel {
         fireSearch(debounce: false)
     }
 
+    /// Pull-to-refresh: 現在の検索条件に紐づくキャッシュを破棄して page=1 から取得し直す (PRD AC-6.1)。
+    /// `.refreshable` から呼ばれるため async。
+    func refresh() async {
+        guard hasActiveCondition else { return }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let qString = RepositorySearchQueryBuilder.build(keyword: trimmed, qualifiers: appliedQualifiers)
+        cache.invalidate(q: qString, sort: sort)
+        fireSearch(debounce: false)
+        await currentTask?.value
+    }
+
     func applyQualifiers(_ qualifiers: RepositorySearchQualifiers) {
         guard qualifiers.isValid else { return }
         appliedQualifiers = qualifiers
