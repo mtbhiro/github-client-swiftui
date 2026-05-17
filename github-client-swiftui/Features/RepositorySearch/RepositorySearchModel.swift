@@ -269,15 +269,8 @@ final class RepositorySearchModel {
         let cacheKey = makeCacheKey(q: qString, page: nextPage)
 
         // PRD AC-3.2: 次ページがキャッシュ命中なら paging-loading を経由せず loaded のまま末尾に追記する。
-        // ただし同期的に追記すると、追記直後の List 末尾 ProgressView の onAppear がそのまま連鎖し、
-        // 1 回のスクロールで複数ページが一気に展開され、スクロール位置が崩れる。1 tick 遅延して
-        // SwiftUI に再レイアウトの機会を与え、末尾が画面内に入った場合のみ次の onAppear が発火する形にする。
         if let cached = cache.get(cacheKey) {
-            currentTask = Task { [weak self] in
-                guard let self else { return }
-                try? Task.checkCancellation()
-                self.applyPagingResult(cached, base: state, nextPage: nextPage)
-            }
+            applyPagingResult(cached, base: state, nextPage: nextPage)
             return
         }
 
