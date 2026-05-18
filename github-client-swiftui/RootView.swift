@@ -28,6 +28,9 @@ struct RootView: View {
                 }
                 .tag(RootTab.settings)
         }
+        .onOpenURL { url in
+            coordinator.handle(deepLink: url)
+        }
     }
 }
 
