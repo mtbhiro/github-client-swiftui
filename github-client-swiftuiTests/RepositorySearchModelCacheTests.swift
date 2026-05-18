@@ -363,6 +363,84 @@ struct RepositorySearchModelCacheTests {
         #expect(cache.get(key1)?.repositories == refreshed.repositories)
     }
 
+    // AC-6.1: refresh 中も既存の .loaded を維持し、.loading に落ちない
+    @Test func refresh_keepsLoadedState_whileFetching() async {
+        let initial = RepositorySearchPageResult(
+            repositories: makeRepos(count: 5, startId: 1),
+            totalCount: 5,
+            incompleteResults: false
+        )
+        let refreshed = RepositorySearchPageResult(
+            repositories: makeRepos(count: 5, startId: 100),
+            totalCount: 5,
+            incompleteResults: false
+        )
+        let (model, mock, _) = makeSUT(searchResult: .success(initial))
+        model.query = "swift"
+        await waitForInflight(model)
+        guard case let .loaded(initialState) = model.phase else {
+            Issue.record("Expected loaded after initial fetch")
+            return
+        }
+
+        // refresh の API レスポンスを意図的に遅延させ、その間 phase を観測する。
+        await mock.setSearchAsyncHandler { @Sendable _, _, _, _ in
+            // 1 hop だけ待たせて、refresh() 呼び出し直後の phase を観測できるようにする。
+            await Task.yield()
+            await Task.yield()
+            return refreshed
+        }
+
+        async let refreshFinished: Void = model.refresh()
+        // refresh 開始直後は handler 内で suspend しているはずなので、
+        // 既存の .loaded がそのまま見えていることを確認する。
+        await Task.yield()
+        guard case let .loaded(midState) = model.phase else {
+            Issue.record("Expected to stay loaded during refresh, got \(model.phase)")
+            return
+        }
+        #expect(midState.repositories == initialState.repositories)
+        await refreshFinished
+
+        guard case let .loaded(after) = model.phase else {
+            Issue.record("Expected loaded after refresh, got \(model.phase)")
+            return
+        }
+        #expect(after.repositories == refreshed.repositories)
+    }
+
+    // AC-6.3: refresh が失敗したとき、既存の .loaded と既存キャッシュが維持される
+    @Test func refresh_failure_keepsExistingListAndCache() async {
+        let initial = RepositorySearchPageResult(
+            repositories: makeRepos(count: 5, startId: 1),
+            totalCount: 5,
+            incompleteResults: false
+        )
+        let (model, mock, cache) = makeSUT(searchResult: .success(initial))
+        model.query = "swift"
+        await waitForInflight(model)
+        guard case let .loaded(initialState) = model.phase else {
+            Issue.record("Expected loaded after initial fetch")
+            return
+        }
+        let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
+        let key1 = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
+        #expect(cache.get(key1)?.repositories == initial.repositories)
+
+        await mock.setSearchResult(.failure(URLError(.notConnectedToInternet)))
+        await model.refresh()
+
+        // 既存の .loaded がそのまま残ること
+        guard case let .loaded(after) = model.phase else {
+            Issue.record("Expected loaded to be preserved on refresh failure, got \(model.phase)")
+            return
+        }
+        #expect(after.repositories == initialState.repositories)
+
+        // 既存キャッシュも破棄されていないこと
+        #expect(cache.get(key1)?.repositories == initial.repositories)
+    }
+
     @Test func refresh_dropsAllPagesForCurrentCondition_keepingOtherEntries() {
         let cache = RepositorySearchCache()
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)

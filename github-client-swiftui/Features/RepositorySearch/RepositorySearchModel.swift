@@ -105,15 +105,47 @@ final class RepositorySearchModel {
         fireSearch(debounce: false)
     }
 
-    /// Pull-to-refresh: 現在の検索条件に紐づくキャッシュを破棄して page=1 から取得し直す (PRD AC-6.1)。
+    /// Pull-to-refresh: 現在の検索条件で page=1 を API から再取得する (PRD AC-6.1)。
     /// `.refreshable` から呼ばれるため async。
+    /// 取得中は既存の `.loaded` を維持し、`.refreshable` 標準のスピナーだけが表示される。
+    /// 成功時に限って page=1 以降のキャッシュを破棄し、新結果で `.loaded` を差し替える。
+    /// 失敗時は既存リストとキャッシュをそのまま残す。
     func refresh() async {
         guard hasActiveCondition else { return }
+        guard case .loaded = phase else { return }
+
+        cancelCurrentTask()
+
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let qString = RepositorySearchQueryBuilder.build(keyword: trimmed, qualifiers: appliedQualifiers)
-        cache.invalidate(q: qString, sort: sort)
-        fireSearch(debounce: false)
-        await currentTask?.value
+        let sortKey = sort.key.rawValue
+        let orderKey = sort.order.rawValue
+        let snapshotSort = sort
+
+        let task = Task { [weak self] in
+            do {
+                guard let self else { return }
+                let result = try await self.repository.searchRepositories(
+                    query: qString,
+                    sort: sortKey,
+                    order: orderKey,
+                    page: 1
+                )
+                try Task.checkCancellation()
+                self.cache.invalidate(q: qString, sort: snapshotSort)
+                let key = RepositorySearchCache.Key(q: qString, sort: snapshotSort, page: 1)
+                self.cache.put(key, value: result)
+                self.applyInitialResult(result, query: trimmed)
+            } catch is CancellationError {
+                return
+            } catch {
+                // 失敗時は既存の .loaded（および対応キャッシュ）を維持する。
+                // refresh は明示的なユーザー操作だが、エラーで画面全体を入れ替えると古い結果まで失われるため何もしない。
+                return
+            }
+        }
+        currentTask = task
+        await task.value
     }
 
     func applyQualifiers(_ qualifiers: RepositorySearchQualifiers) {
