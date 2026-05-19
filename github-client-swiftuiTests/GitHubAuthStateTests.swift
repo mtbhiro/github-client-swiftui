@@ -45,14 +45,29 @@ struct GitHubAuthStateTests {
         let cache = makeStorage()
         let state = GitHubAuthState(service: service, profileCache: cache)
 
-        state.completeSignIn(token: "new-token", user: .sample)
+        let result = state.completeSignIn(token: "new-token", user: .sample)
 
+        #expect(result == true)
         #expect(state.phase == .signedIn)
         #expect(state.token == "new-token")
         #expect(state.user == .sample)
         #expect(state.userIsFromCache == false)
         #expect(service.loadToken() == "new-token")
         #expect(cache.load() == .sample)
+    }
+
+    @Test func completeSignIn_whenTokenSaveFails_returnsFalseAndKeepsSignedOut() {
+        let service = MockGitHubAuthService()
+        service.setSaveTokenError(KeychainStorageError.osStatus(-25300))
+        let cache = makeStorage()
+        let state = GitHubAuthState(service: service, profileCache: cache)
+
+        let result = state.completeSignIn(token: "tok", user: .sample)
+
+        #expect(result == false)
+        #expect(state.phase == .signedOut)
+        #expect(state.token == nil)
+        #expect(state.user == nil)
     }
 
     @Test func logout_clearsStateAndCache() {

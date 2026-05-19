@@ -11,6 +11,7 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
         var userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample)
         var clientIDValue: String? = "mock-client-id"
         var token: String?
+        var saveTokenError: (any Error)?
         var pollCallCount: Int = 0
         var lastPollDeviceCode: String?
         var savedTokenHistory: [String] = []
@@ -81,8 +82,13 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
         return try result.get()
     }
 
+    func setSaveTokenError(_ error: (any Error)?) {
+        stateLock.withLock { $0.saveTokenError = error }
+    }
+
     func saveToken(_ token: String) throws {
-        stateLock.withLock { state in
+        try stateLock.withLock { state in
+            if let error = state.saveTokenError { throw error }
             state.token = token
             state.savedTokenHistory.append(token)
         }

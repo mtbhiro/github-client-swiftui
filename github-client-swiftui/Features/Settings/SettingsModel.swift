@@ -38,9 +38,8 @@ final class SettingsModel {
     }
 
     /// 起動直後 (および sign-in 完了直後) に発火し、`GET /user` でプロフィールを最新化する。
-    /// 失敗時の挙動は 2 通り:
-    ///   - 401 → AuthenticatedHttpClient 側で signedOut に倒される (PRD AC-6.3)。本 Model は別の動作をしない。
-    ///   - その他 (network / 5xx) → 既存プロフィール (cache or nil) を維持する (PRD AC-5.2)。
+    /// 401 は AuthenticatedHttpClient 側で signedOut に倒される (PRD AC-6.3)。
+    /// その他エラー (network / 5xx) は既存プロフィール (cache or nil) を維持する (PRD AC-5.2)。
     func refreshProfile() {
         guard authState.phase == .signedIn, let token = authState.token else { return }
 
@@ -54,9 +53,10 @@ final class SettingsModel {
                     self.authState.updateProfile(user)
                 }
             } catch is CancellationError {
-                return
+                // キャンセルは正常フロー
             } catch {
-                return
+                // 401 は AuthenticatedHttpClient が処理済み。
+                // network / 5xx は既存プロフィールを維持 (PRD AC-5.2)。
             }
         }
     }

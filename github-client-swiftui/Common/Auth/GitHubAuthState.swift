@@ -46,17 +46,19 @@ final class GitHubAuthState {
         phase = .signedOut
     }
 
-    func completeSignIn(token: String, user: GitHubAuthenticatedUser) {
+    @discardableResult
+    func completeSignIn(token: String, user: GitHubAuthenticatedUser) -> Bool {
         do {
             try service.saveToken(token)
         } catch {
-            return
+            return false
         }
         self.token = token
         self.user = user
         self.userIsFromCache = false
         profileCache?.save(user)
         phase = .signedIn
+        return true
     }
 
     func updateProfile(_ user: GitHubAuthenticatedUser) {
