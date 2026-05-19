@@ -143,3 +143,41 @@ private func waitForInflight(_ model: RepositorySearchModel) async {
 - [Swift Testing — `Confirmation`](https://developer.apple.com/documentation/testing/confirmation) — 「N 回起きたら閉じる」を宣言する API
 - [Swift Testing — Running tests serially or in parallel](https://developer.apple.com/documentation/testing/parallelization) — 並列実行とその無効化
 - Swift Concurrency: `Task.value` で Task の完了を待つ（`Task<Success, Failure>` の `.value`）
+
+---
+
+## Mock がバリデーションを省略してテストがハング・無限ループする
+
+### 症状
+
+`DeviceFlowModelTests` の `start_emptyClientID_showsErrorDeviceCode_config()` が永久にハングし、テストランナー全体が止まった。Xcode も XcodeBuildMCP の `test_sim` も応答を返さなくなった。
+
+### 原因
+
+本物の `GitHubAuthService.requestDeviceCode()` は最初に `try clientID()` を呼び、空文字なら `GitHubAuthConfigError.missingClientID` を throw して早期リターンする。しかし `MockGitHubAuthService.requestDeviceCode()` は `clientID()` チェックを省略し、`deviceCodeResult`（デフォルト `.success`）をそのまま返していた。
+
+その結果：
+1. `clientID: ""` でも `requestDeviceCode()` が成功する
+2. `pollLoop` に入る
+3. `intervalScale: 0.0` → `Task.sleep(for: .milliseconds(0))` → sleep が即座に返る
+4. Mock の `pollAccessToken` がデフォルトで `.pending` を返し続ける
+5. **無限ループ** → テスト全体がハング
+
+### 回避策
+
+**Mock は本物の実装と同じバリデーション分岐を持つこと**。テストで「エラーケースを通す」テストを書くとき、Mock がそのエラーパスを実装していなければ、テストは想定と異なるコードパスを通り、最悪ハングする。
+
+修正例（`MockGitHubAuthService`）:
+```swift
+func requestDeviceCode() async throws -> GitHubDeviceCode {
+    _ = try clientID()  // 本物と同じバリデーション
+    let result = stateLock.withLock { $0.deviceCodeResult }
+    return try result.get()
+}
+```
+
+### 教訓
+
+- Mock を書くときは「本物の early return / throw パスを全て再現しているか」をチェックする
+- `intervalScale: 0.0` のようにループを高速化するテストパラメータは、「ループが終了しない場合」に即座にハングを引き起こすため、Mock のバリデーション漏れとの組み合わせが特に危険
+- 新しいテストを書いたら、並列テスト環境（Xcode のデフォルト）で安定して通ることを確認する

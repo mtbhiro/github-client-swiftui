@@ -80,6 +80,11 @@
 - **`Task.sleep` で完了を待つテストを書かない**。Model 内 Task の完了を待ちたいときは、Model に inflight Task を読める read-only プロパティを生やし `await task?.value` で待つ。`await` できない callback 経由なら `Confirmation` を使う。`Task.sleep` ベースの待機は「何も起きないこと」「debounce 等の本質的に時間経過を見たい」場合にだけ使う。詳細は `docs/pitfalls/testing.md`。
 - **`@Suite(.serialized)` は最終手段**。先に「(1) 完了を await できる経路を作る、(2) Confirmation、(3) テスト固有の独立リソース (UserDefaults suiteName など)、(4) Mock の actor → ロック化」を検討する。それでも解決できない（`StubURLProtocol` の static state のように根本書き換えが大コスト等）ケースに限って暫定的に貼る。詳細は `docs/pitfalls/testing.md`。
 - 新規追加した Observable Model / Repository / Mapper のテストは、PRD §3 の AC と PRD §9 の検証要件に **1 対 1 で対応** させる。
+- **flaky テストは絶対に書かない**。テストは並列実行環境（Xcode の並列テスト）で 100% 安定して通ることが必須。以下を守る：
+  - `intervalScale: 0.0` 等でループを高速化する Mock は、**並列テストで MainActor を奪い合ったときにもハングしない**ことを確認する。
+  - Mock は本物の実装と同じバリデーション（例: `clientID()` チェック）を行い、本物では到達しないコードパスをテストが通らないようにする。Mock がバリデーションを省略すると、テストでは成功扱いだが実際には無限ループに入るなどの事故が起きる。
+  - `await model.inFlightTask?.value` で Task 完了を待つパターンでは、Task が確実にセットされてから await すること。Task のライフサイクル（開始・完了・キャンセル）を明確に追えない設計のテストは書き直す。
+  - テストがハングする（タイムアウトなしで永久に返らない）のは **最悪のケース**。CI もローカルも止まる。ハングの可能性があるテストを書いたら、そのテストだけを 10 回連続で実行して安定性を確認する。
 
 ## 7. コーディングスタイル（プロジェクト方針）
 
@@ -116,6 +121,7 @@
 - [ ] テストで `Task.sleep` ベースの polling で完了を待った（§6 の代替策を検討せず）
 - [ ] §6 の代替策を検討せずに `@Suite(.serialized)` を貼った
 - [ ] タスク（=テストファイル）ごとに `mcp__XcodeBuildMCP__test_sim` を `-only-testing:` 単発で呼んだ — シミュレータが多重起動するので、複数タスク分のテストを 1 回の `test_sim` にまとめる（`-only-testing` は繰り返し指定可、詳細は `docs/pitfalls/xcodebuild-mcp.md`）
+- [ ] flaky テストを書いた / 既存テストを flaky にした — 並列実行で 100% 安定して通らないテストはマージ禁止。Mock のバリデーション省略（本物と異なる分岐）や `intervalScale: 0.0` での無限ループ、タイミング依存の assertion は全てハングや flaky の原因になる
 
 上記のいずれかに該当しそうになったら、コードを書く手を止めて理由を整理する。
 

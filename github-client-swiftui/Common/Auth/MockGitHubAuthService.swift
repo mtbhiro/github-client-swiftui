@@ -59,6 +59,7 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
     // MARK: - Protocol
 
     func requestDeviceCode() async throws -> GitHubDeviceCode {
+        _ = try clientID()
         let result = stateLock.withLock { $0.deviceCodeResult }
         return try result.get()
     }
@@ -104,8 +105,8 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
     }
 }
 
-extension GitHubDeviceCode {
-    nonisolated static let sample = GitHubDeviceCode(
+nonisolated extension GitHubDeviceCode {
+    static let sample = GitHubDeviceCode(
         deviceCode: "sample-device-code",
         userCode: "WDJB-MJHT",
         verificationURL: URL(string: "https://github.com/login/device")!,
@@ -114,8 +115,8 @@ extension GitHubDeviceCode {
     )
 }
 
-extension GitHubAuthenticatedUser {
-    nonisolated static let sample = GitHubAuthenticatedUser(
+nonisolated extension GitHubAuthenticatedUser {
+    static let sample = GitHubAuthenticatedUser(
         login: "octocat",
         name: "The Octocat",
         avatarURL: URL(string: "https://avatars.githubusercontent.com/u/1?v=4")

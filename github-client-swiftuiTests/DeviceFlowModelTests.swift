@@ -192,7 +192,7 @@ struct DeviceFlowModelTests {
     }
 
     @Test func restart_afterExpired_resetsToLoading_andPollAgain() async {
-        let (model, mock, _) = makeSUT()
+        let (model, mock, recorder) = makeSUT()
         mock.setPollHandler { _ in .expiredToken }
 
         model.start()
@@ -201,10 +201,9 @@ struct DeviceFlowModelTests {
 
         mock.setPollHandler { _ in .success(accessToken: "gho_r") }
         model.restart()
-        await waitForInflight(model)
-        if case .polling = model.phase {
-            Issue.record("Should have advanced past polling")
-        }
+        await model.inFlightTask?.value
+        #expect(recorder.calls.count == 1)
+        #expect(recorder.calls.first?.0 == "gho_r")
     }
 
     @Test func polling_userFetchFailure_setsErrorDeviceCodeNetwork() async {

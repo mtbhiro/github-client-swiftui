@@ -1,3 +1,11 @@
+schemaVersion: 1
 enabledWorkflows:
   - simulator
   - ui-automation
+sessionDefaults:
+  projectPath: /Users/hiroc19/ghq/github.com/mtbhiro/github-client-swiftui/github-client-swiftui.xcodeproj
+  scheme: github-client-swiftui
+  simulatorName: iPhone 17
+  simulatorId: E8847141-7212-4F81-A67F-7DA6CC86F089
+  useLatestOS: true
+  simulatorPlatform: iOS Simulator
