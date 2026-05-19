@@ -68,15 +68,14 @@ final class GitHubAuthState {
 
     func handle401() {
         guard phase != .signedOut else { return }
-        try? service.clearToken()
-        token = nil
-        user = nil
-        userIsFromCache = false
-        profileCache?.delete()
-        phase = .signedOut
+        clearSession()
     }
 
     func logout() {
+        clearSession()
+    }
+
+    private func clearSession() {
         try? service.clearToken()
         token = nil
         user = nil
