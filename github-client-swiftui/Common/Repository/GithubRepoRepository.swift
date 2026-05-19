@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 nonisolated protocol GithubRepoRepositoryProtocol: Sendable {
     func searchRepositories(
@@ -16,7 +17,7 @@ nonisolated protocol GithubRepoRepositoryProtocol: Sendable {
 nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
     private let httpClient: HttpClient
 
-    init(httpClient: HttpClient = URLSessionHttpClient()) {
+    init(httpClient: HttpClient) {
         self.httpClient = httpClient
     }
 
@@ -82,5 +83,18 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         )
         let response: [GitHubIssueCommentDTO] = try await httpClient.send(request)
         return response.map { $0.toDomain() }
+    }
+}
+
+private struct GithubRepoRepositoryEnvironmentKey: EnvironmentKey {
+    // Preview / Test で .environment 未注入のまま動くよう Mock をデフォルトに置く。
+    // 本番では `AuthStack` が必ず認証付きの実体を注入する。
+    static let defaultValue: any GithubRepoRepositoryProtocol = MockGithubRepoRepository()
+}
+
+extension EnvironmentValues {
+    var githubRepository: any GithubRepoRepositoryProtocol {
+        get { self[GithubRepoRepositoryEnvironmentKey.self] }
+        set { self[GithubRepoRepositoryEnvironmentKey.self] = newValue }
     }
 }

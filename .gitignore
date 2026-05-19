@@ -20,3 +20,6 @@ Pods/
 ## Claude Code
 .claude/settings.local.json
 .claude/worktrees/
+
+## GitHub OAuth Client ID (個人開発者ごとに値を書き換える)
+Config.xcconfig

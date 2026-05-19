@@ -8,7 +8,7 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
     init(
         fullName: GitHubRepoFullName,
         issueDetailRoute: @escaping (Int) -> IssueDetailRoute,
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
+        repository: any GithubRepoRepositoryProtocol
     ) {
         _model = State(initialValue: IssueListModel(
             fullName: fullName,

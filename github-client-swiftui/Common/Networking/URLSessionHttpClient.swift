@@ -12,7 +12,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         self.decoder = decoder
     }
 
-    func send<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> T {
+    func sendWithResponseMetadata<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> HttpResponse<T> {
         let urlRequest = try buildURLRequest(from: request)
 
         try Task.checkCancellation()
@@ -34,16 +34,19 @@ nonisolated struct URLSessionHttpClient: HttpClient {
             throw HttpClientError.networkError(URLError(.badServerResponse))
         }
 
+        let headers = Self.headerMap(from: httpResponse)
+
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw HttpClientError.httpError(
                 statusCode: httpResponse.statusCode,
                 data: data,
-                headers: Self.headerMap(from: httpResponse)
+                headers: headers
             )
         }
 
         do {
-            return try decoder.decode(T.self, from: data)
+            let value = try decoder.decode(T.self, from: data)
+            return HttpResponse(value: value, headers: headers)
         } catch {
             throw HttpClientError.decodingError
         }

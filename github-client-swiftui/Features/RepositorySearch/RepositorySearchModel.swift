@@ -67,7 +67,7 @@ final class RepositorySearchModel {
     private let cache: RepositorySearchCache
 
     init(
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository(),
+        repository: GithubRepoRepositoryProtocol,
         debounceDuration: Duration = .milliseconds(300),
         conditionStore: RepositorySearchConditionStore = RepositorySearchConditionStore(),
         cache: RepositorySearchCache = RepositorySearchCache()

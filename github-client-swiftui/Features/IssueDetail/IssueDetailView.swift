@@ -6,7 +6,7 @@ struct IssueDetailView: View {
     init(
         fullName: GitHubRepoFullName,
         issueNumber: Int,
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
+        repository: any GithubRepoRepositoryProtocol
     ) {
         _model = State(initialValue: IssueDetailModel(
             fullName: fullName,

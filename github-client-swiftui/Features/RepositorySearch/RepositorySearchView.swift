@@ -3,12 +3,13 @@ import SwiftUI
 struct RepositorySearchView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var bookmarkStore
+    @Environment(\.githubRepository) private var repository
     @State private var model: RepositorySearchModel
     @State private var isShowingFilters = false
     @FocusState private var isQueryFieldFocused: Bool
 
-    init(cache: RepositorySearchCache) {
-        _model = State(initialValue: RepositorySearchModel(cache: cache))
+    init(cache: RepositorySearchCache, repository: any GithubRepoRepositoryProtocol) {
+        _model = State(initialValue: RepositorySearchModel(repository: repository, cache: cache))
     }
 
     var body: some View {
@@ -87,19 +88,22 @@ struct RepositorySearchView: View {
                 case let .repositoryDetail(fullName):
                     RepositoryDetailView(
                         fullName: fullName,
-                        issueListRoute: SearchRoute.issueList(fullName)
+                        issueListRoute: SearchRoute.issueList(fullName),
+                        repository: repository
                     )
                 case let .issueList(fullName):
                     IssueListView(
                         fullName: fullName,
                         issueDetailRoute: { number in
                             SearchRoute.issueDetail(fullName, number: number)
-                        }
+                        },
+                        repository: repository
                     )
                 case let .issueDetail(fullName, number):
                     IssueDetailView(
                         fullName: fullName,
-                        issueNumber: number
+                        issueNumber: number,
+                        repository: repository
                     )
                 }
             }
@@ -309,7 +313,7 @@ struct RepositorySearchView: View {
 }
 
 #Preview("idle") {
-    RepositorySearchView(cache: RepositorySearchCache())
+    RepositorySearchView(cache: RepositorySearchCache(), repository: MockGithubRepoRepository())
         .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
 }

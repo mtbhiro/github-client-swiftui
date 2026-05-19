@@ -12,4 +12,6 @@ enum BookmarksRoute: Hashable {
     case issueDetail(GitHubRepoFullName, number: Int)
 }
 
-enum SettingsRoute: Hashable {}
+enum SettingsRoute: Hashable {
+    case deviceFlow
+}

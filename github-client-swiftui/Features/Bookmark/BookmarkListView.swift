@@ -3,6 +3,7 @@ import SwiftUI
 struct BookmarkListView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var store
+    @Environment(\.githubRepository) private var repository
     @State private var filter: BookmarkFilter = .repository
     @State private var expandedCounts: [String: Int] = [:]
 
@@ -34,19 +35,22 @@ struct BookmarkListView: View {
                 case let .repositoryDetail(fullName):
                     RepositoryDetailView(
                         fullName: fullName,
-                        issueListRoute: BookmarksRoute.issueList(fullName)
+                        issueListRoute: BookmarksRoute.issueList(fullName),
+                        repository: repository
                     )
                 case let .issueList(fullName):
                     IssueListView(
                         fullName: fullName,
                         issueDetailRoute: { number in
                             BookmarksRoute.issueDetail(fullName, number: number)
-                        }
+                        },
+                        repository: repository
                     )
                 case let .issueDetail(fullName, number):
                     IssueDetailView(
                         fullName: fullName,
-                        issueNumber: number
+                        issueNumber: number,
+                        repository: repository
                     )
                 }
             }

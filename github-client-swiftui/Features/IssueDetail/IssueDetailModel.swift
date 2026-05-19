@@ -29,7 +29,7 @@ final class IssueDetailModel {
     init(
         fullName: GitHubRepoFullName,
         issueNumber: Int,
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
+        repository: GithubRepoRepositoryProtocol
     ) {
         self.fullName = fullName
         self.issueNumber = issueNumber

@@ -27,13 +27,15 @@
 		D450C86E2FA981C2007264FC /* github-client-swiftui.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "github-client-swiftui.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D450C87B2FA981C3007264FC /* github-client-swiftuiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "github-client-swiftuiTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D450C8852FA981C3007264FC /* github-client-swiftuiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "github-client-swiftuiUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4AUTH0000000000000001 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		D4AUTH0000000000000002 /* Config.xcconfig.template */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig.template; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		D4DEEPLNK00000000000001 /* Exceptions for "github-client-swiftui" folder in "github-client-swiftui" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Info.plist",
+				Info.plist,
 			);
 			target = D450C86D2FA981C2007264FC /* github-client-swiftui */;
 		};
@@ -88,6 +90,8 @@
 		D450C8652FA981C2007264FC = {
 			isa = PBXGroup;
 			children = (
+				D4AUTH0000000000000001 /* Config.xcconfig */,
+				D4AUTH0000000000000002 /* Config.xcconfig.template */,
 				D450C8702FA981C2007264FC /* github-client-swiftui */,
 				D450C87E2FA981C3007264FC /* github-client-swiftuiTests */,
 				D450C8882FA981C3007264FC /* github-client-swiftuiUITests */,
@@ -284,6 +288,7 @@
 /* Begin XCBuildConfiguration section */
 		D450C88D2FA981C3007264FC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4AUTH0000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -348,6 +353,7 @@
 		};
 		D450C88E2FA981C3007264FC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4AUTH0000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

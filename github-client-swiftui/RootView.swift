@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(\.githubRepository) private var repository
     // PRD repository-search-cache.md AC-6.3: 検索画面のライフサイクルとは独立にキャッシュを保持する。
     // RootView は TabView のホストとしてアプリ起動中は破棄されない前提なので、@State の identity が
     // RepositorySearchView の pop/再構築をまたいで同じインスタンスを維持する。
@@ -10,7 +11,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var coordinator = coordinator
         TabView(selection: $coordinator.selectedTab) {
-            RepositorySearchView(cache: searchCache)
+            RepositorySearchView(cache: searchCache, repository: repository)
                 .tabItem {
                     Label("検索", systemImage: "magnifyingglass")
                 }

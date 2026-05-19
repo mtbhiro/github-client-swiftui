@@ -115,6 +115,7 @@
 - [ ] PRD の対象外（§2.2 / §10）に手を出した
 - [ ] テストで `Task.sleep` ベースの polling で完了を待った（§6 の代替策を検討せず）
 - [ ] §6 の代替策を検討せずに `@Suite(.serialized)` を貼った
+- [ ] タスク（=テストファイル）ごとに `mcp__XcodeBuildMCP__test_sim` を `-only-testing:` 単発で呼んだ — シミュレータが多重起動するので、複数タスク分のテストを 1 回の `test_sim` にまとめる（`-only-testing` は繰り返し指定可、詳細は `docs/pitfalls/xcodebuild-mcp.md`）
 
 上記のいずれかに該当しそうになったら、コードを書く手を止めて理由を整理する。
 

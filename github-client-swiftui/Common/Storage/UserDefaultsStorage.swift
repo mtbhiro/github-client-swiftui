@@ -18,4 +18,8 @@ struct UserDefaultsStorage<T: Codable> {
         guard let data = try? JSONEncoder().encode(value) else { return }
         defaults.set(data, forKey: key)
     }
+
+    func delete() {
+        defaults.removeObject(forKey: key)
+    }
 }

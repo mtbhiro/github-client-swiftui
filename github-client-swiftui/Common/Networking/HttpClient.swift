@@ -2,6 +2,18 @@ import Foundation
 
 nonisolated protocol HttpClient: Sendable {
     func send<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> T
+    func sendWithResponseMetadata<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> HttpResponse<T>
+}
+
+extension HttpClient {
+    func send<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> T {
+        try await sendWithResponseMetadata(request).value
+    }
+}
+
+nonisolated struct HttpResponse<T: Sendable>: Sendable {
+    let value: T
+    let headers: [String: String]
 }
 
 nonisolated enum ApiHost: Sendable {

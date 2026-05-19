@@ -15,7 +15,7 @@ final class RepositoryDetailModel {
 
     init(
         fullName: GitHubRepoFullName,
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
+        repository: GithubRepoRepositoryProtocol
     ) {
         self.fullName = fullName
         self.repository = repository

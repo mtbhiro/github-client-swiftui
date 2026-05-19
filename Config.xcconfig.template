@@ -1,0 +1,8 @@
+// GitHub OAuth Device Flow に使う Client ID。
+// 利用するには:
+//   1. このファイルを `Config.xcconfig` にコピーする（`Config.xcconfig` は .gitignore 済み）。
+//   2. 以下の値を、自身が GitHub Developer Settings で発行した OAuth App の Client ID に置き換える。
+//
+// 値を空のままビルドした場合、Settings から GitHub にログインしようとした際に
+// 「アプリの設定に問題があります」エラーが表示される。
+GITHUB_OAUTH_CLIENT_ID =

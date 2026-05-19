@@ -7,7 +7,7 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
     init(
         fullName: GitHubRepoFullName,
         issueListRoute: IssueListRoute,
-        repository: GithubRepoRepositoryProtocol = GithubRepoRepository()
+        repository: any GithubRepoRepositoryProtocol
     ) {
         _model = State(initialValue: RepositoryDetailModel(
             fullName: fullName,
