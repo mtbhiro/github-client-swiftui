@@ -25,7 +25,8 @@ final class IssueListModel {
 
     let fullName: GitHubRepoFullName
 
-    private static let perPage = 30
+    static let perPage = 30
+    var inFlightTask: Task<Void, Never>? { currentTask }
     private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
 

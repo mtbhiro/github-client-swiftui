@@ -8,12 +8,20 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
     var issuesResult: Result<[GitHubIssue], Error>
     var issuesResultHandler: (@Sendable (GitHubRepoFullName, Int) -> Result<[GitHubIssue], Error>)?
     var issueDetailResult: Result<GitHubIssueDetail, Error>
+    var issueDetailAsyncHandler: (@Sendable (GitHubRepoFullName, Int) async throws -> GitHubIssueDetail)?
     var issueCommentsResult: Result<[GitHubIssueComment], Error>
+    var issueCommentsAsyncHandler: (@Sendable (GitHubRepoFullName, Int, Int) async throws -> [GitHubIssueComment])?
+    var fetchAsyncHandler: (@Sendable (GitHubRepoFullName) async throws -> GitHubRepoDetail)?
     private(set) var searchCallCount = 0
     private(set) var lastQuery: String?
     private(set) var lastSort: String?
     private(set) var lastOrder: String?
     private(set) var lastPage: Int?
+    private(set) var fetchIssuesCallCount = 0
+    private(set) var fetchIssuesLastPage: Int?
+    private(set) var fetchIssueDetailCallCount = 0
+    private(set) var fetchIssueCommentsCallCount = 0
+    private(set) var fetchRepositoryCallCount = 0
 
     init(
         searchResult: Result<RepositorySearchPageResult, Error> = .success(
@@ -63,6 +71,18 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
         issueCommentsResult = result
     }
 
+    func setIssueDetailAsyncHandler(_ handler: (@Sendable (GitHubRepoFullName, Int) async throws -> GitHubIssueDetail)?) {
+        issueDetailAsyncHandler = handler
+    }
+
+    func setIssueCommentsAsyncHandler(_ handler: (@Sendable (GitHubRepoFullName, Int, Int) async throws -> [GitHubIssueComment])?) {
+        issueCommentsAsyncHandler = handler
+    }
+
+    func setFetchAsyncHandler(_ handler: (@Sendable (GitHubRepoFullName) async throws -> GitHubRepoDetail)?) {
+        fetchAsyncHandler = handler
+    }
+
     func searchRepositories(
         query: String,
         sort: String?,
@@ -84,10 +104,16 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
     }
 
     func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail {
-        try fetchResult.get()
+        fetchRepositoryCallCount += 1
+        if let handler = fetchAsyncHandler {
+            return try await handler(fullName)
+        }
+        return try fetchResult.get()
     }
 
     func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue] {
+        fetchIssuesCallCount += 1
+        fetchIssuesLastPage = page
         if let handler = issuesResultHandler {
             return try handler(fullName, page).get()
         }
@@ -95,10 +121,18 @@ actor MockGithubRepoRepository: GithubRepoRepositoryProtocol {
     }
 
     func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail {
-        try issueDetailResult.get()
+        fetchIssueDetailCallCount += 1
+        if let handler = issueDetailAsyncHandler {
+            return try await handler(fullName, number)
+        }
+        return try issueDetailResult.get()
     }
 
     func fetchIssueComments(fullName: GitHubRepoFullName, number: Int, page: Int) async throws -> [GitHubIssueComment] {
-        try issueCommentsResult.get()
+        fetchIssueCommentsCallCount += 1
+        if let handler = issueCommentsAsyncHandler {
+            return try await handler(fullName, number, page)
+        }
+        return try issueCommentsResult.get()
     }
 }

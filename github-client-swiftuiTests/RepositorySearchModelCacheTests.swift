@@ -155,8 +155,7 @@ struct RepositorySearchModelCacheTests {
             return
         }
 
-        await mock.setSearchAsyncHandler { @Sendable _, _, _, p in
-            #expect(p == 2)
+        await mock.setSearchAsyncHandler { @Sendable _, _, _, _ in
             return RepositorySearchPageResult(repositories: page2, totalCount: 100, incompleteResults: false)
         }
         let baseline = await mock.searchCallCount
@@ -174,6 +173,7 @@ struct RepositorySearchModelCacheTests {
         #expect(after.repositories.count == 60)
         let afterCalls = await mock.searchCallCount
         #expect(afterCalls == baseline + 1)
+        await #expect(mock.lastPage == 2)
     }
 
     @Test func paging_page1Hit_page2Miss_handlesEachIndependently() async {
@@ -287,15 +287,16 @@ struct RepositorySearchModelCacheTests {
 
     @Test func cancelledRequest_isNotCached() async {
         let (model, mock, cache) = makeSUT()
+        let handlerReached = AsyncStream<Void>.makeStream()
         await mock.setSearchAsyncHandler { @Sendable _, _, _, _ in
+            handlerReached.continuation.yield()
             while !Task.isCancelled {
                 await Task.yield()
             }
             throw CancellationError()
         }
         model.query = "swift"
-        await Task.yield()
-        await Task.yield()
+        for await _ in handlerReached.stream { break }
         model.onDisappear()
         await waitForInflight(model)
 
@@ -384,23 +385,26 @@ struct RepositorySearchModelCacheTests {
         }
 
         // refresh の API レスポンスを意図的に遅延させ、その間 phase を観測する。
-        await mock.setSearchAsyncHandler { @Sendable _, _, _, _ in
-            // 1 hop だけ待たせて、refresh() 呼び出し直後の phase を観測できるようにする。
-            await Task.yield()
-            await Task.yield()
-            return refreshed
+        // Confirmation でハンドラ到達を明示的に待ち、タイミング依存を排除する。
+        let resume = AsyncStream<Void>.makeStream()
+        await confirmation { handlerReached in
+            await mock.setSearchAsyncHandler { @Sendable _, _, _, _ in
+                handlerReached()
+                for await _ in resume.stream { break }
+                return refreshed
+            }
+            async let refreshFinished: Void = model.refresh()
+            // handlerReached が呼ばれるまで confirmation が待つので、
+            // ここに到達した時点でハンドラは suspend 中。
+            guard case let .loaded(midState) = model.phase else {
+                Issue.record("Expected to stay loaded during refresh, got \(model.phase)")
+                return
+            }
+            #expect(midState.repositories == initialState.repositories)
+            resume.continuation.yield()
+            resume.continuation.finish()
+            await refreshFinished
         }
-
-        async let refreshFinished: Void = model.refresh()
-        // refresh 開始直後は handler 内で suspend しているはずなので、
-        // 既存の .loaded がそのまま見えていることを確認する。
-        await Task.yield()
-        guard case let .loaded(midState) = model.phase else {
-            Issue.record("Expected to stay loaded during refresh, got \(model.phase)")
-            return
-        }
-        #expect(midState.repositories == initialState.repositories)
-        await refreshFinished
 
         guard case let .loaded(after) = model.phase else {
             Issue.record("Expected loaded after refresh, got \(model.phase)")

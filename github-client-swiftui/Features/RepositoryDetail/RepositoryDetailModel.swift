@@ -5,6 +5,8 @@ final class RepositoryDetailModel {
     private(set) var phase: Phase = .loading
     private let fullName: GitHubRepoFullName
     private let repository: GithubRepoRepositoryProtocol
+
+    var inFlightTask: Task<Void, Never>? { loadTask }
     private var loadTask: Task<Void, Never>?
 
     enum Phase {

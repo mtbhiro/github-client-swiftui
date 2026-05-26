@@ -105,6 +105,7 @@
    - `sendable-guide.md` — `Sendable` の付け方・避け方
    - `task-cancellation-guide.md` — Task キャンセルの伝搬・協調キャンセル
    - `navigation-guide.md` — `NavigationStack` data-driven の組み立て
+   - `testing-design-guide.md` — テスタブルな設計・フレーキー防止・Mock 設計・非同期テストパターン
 3. **落とし穴**: `github-client-swiftui/docs/pitfalls/README.md` を索引にして該当ファイル。
    - `testing.md` — Swift Testing 並列実行と stub race
    - `xcodebuild-mcp.md` — XcodeBuildMCP / AXe の既知の癖

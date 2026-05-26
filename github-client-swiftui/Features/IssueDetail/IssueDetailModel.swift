@@ -10,6 +10,9 @@ final class IssueDetailModel {
     let issueNumber: Int
 
     private let repository: GithubRepoRepositoryProtocol
+
+    var inFlightTask: Task<Void, Never>? { loadTask }
+    var commentsInFlightTask: Task<Void, Never>? { commentsTask }
     private var loadTask: Task<Void, Never>?
     private var commentsTask: Task<Void, Never>?
 

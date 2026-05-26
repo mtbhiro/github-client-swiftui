@@ -56,10 +56,8 @@ struct DeviceFlowModelTests {
         // poll はずっと pending を返し続ける状態にする
         mock.setPollHandler { _ in .pending }
         model.start()
-        // 「polling に入っていること」を確認するには time を進める必要がある
-        // intervalScale=0 のため Task.sleep は即抜け、loop に入る前の最後の `await` は requestDeviceCode 後の
-        // `phase = .polling(code)` 直後。1 回 yield して MainActor 上で phase 更新を反映させる。
-        try? await Task.sleep(for: .milliseconds(20))
+        // intervalScale=0 のため Task.sleep は即抜け。yield で MainActor に制御を返し phase 更新を反映させる。
+        await Task.yield()
         defer { model.cancel() }
 
         if case let .polling(code) = model.phase {
@@ -183,8 +181,7 @@ struct DeviceFlowModelTests {
             .pending
         }
         model.start()
-        // polling に入ってから cancel する
-        try? await Task.sleep(for: .milliseconds(20))
+        await Task.yield()
         model.cancel()
         await waitForInflight(model)
 
