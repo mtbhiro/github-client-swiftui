@@ -11,7 +11,7 @@
 
 - **Swift 6 strict concurrency を遵守する**。コンパイル警告を残さない。
 - **非同期は async/await と Task** で書く。コールバック・Combine・`@Published` は採用しない。
-- **`@unchecked Sendable` は使わない**（§9 チェックリスト）。
+- **`@unchecked Sendable` は使わない**（SwiftLint `unchecked_sendable` ルールで検出される）。
 
 ### 1.2 隔離 (isolation) の選び方
 
@@ -113,7 +113,7 @@
 
 ## 9. やってはいけないこと（チェックリスト）
 
-- [ ] `@unchecked Sendable` を使った
+- [ ] `@unchecked Sendable` を使った（SwiftLint で自動検出）
 - [ ] `ObservableObject` / `@Published` を新規に導入した
 - [ ] `NavigationView` を使った / `NavigationLink(value:)` 以外の遷移を新規に作った
 - [ ] テストファーストにできるロジックを View 経由でしかカバーしていない

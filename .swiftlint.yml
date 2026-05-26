@@ -1,0 +1,80 @@
+excluded:
+  - .claude
+
+disabled_rules:
+  - trailing_comma
+  - blanket_disable_command
+  - statement_position
+
+opt_in_rules:
+  - force_unwrapping
+  - force_cast
+  - discouraged_optional_boolean
+  - empty_count
+  - empty_string
+  - fatal_error_message
+  - first_where
+  - last_where
+  - contains_over_filter_count
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - flatmap_over_map_reduce
+  - sorted_first_last
+  - joined_default_parameter
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unavailable_function
+  - modifier_order
+  - overridden_super_call
+  - prohibited_super_call
+  - yoda_condition
+  - closure_body_length
+  - collection_alignment
+  - multiline_arguments
+  - multiline_parameters
+  - vertical_whitespace_closing_braces
+
+force_cast: error
+force_unwrapping:
+  severity: warning
+
+type_name:
+  excluded:
+    - github_client_swiftuiApp
+
+identifier_name:
+  min_length: 1
+  excluded:
+    - id
+    - i
+
+line_length:
+  warning: 150
+  error: 200
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 800
+
+function_body_length:
+  warning: 80
+  error: 150
+
+closure_body_length:
+  warning: 50
+  error: 100
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+custom_rules:
+  unchecked_sendable:
+    name: "Unchecked Sendable"
+    regex: '@unchecked\s+Sendable'
+    message: "@unchecked Sendable は使用禁止。Sendable に正しく適合させるか、設計を見直す。"
+    severity: error
