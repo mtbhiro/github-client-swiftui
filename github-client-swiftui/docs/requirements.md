@@ -3,9 +3,9 @@
 ## 1. 概要
 
 このプロジェクトは、SwiftUI で実装する iOS 向け GitHub クライアントである。
-ユーザーはリポジトリを検索し、リポジトリ詳細、Issue / Pull Request 一覧、Issue / Pull Request 詳細を確認できる。
+ユーザーはリポジトリを検索し、リポジトリ詳細、Issue / Pull Request 一覧、Issue / Pull Request 詳細を確認できる。GitHub OAuth Device Flow による認証にも対応し、認証済みユーザーは高い API レート制限の恩恵を受けられる。
 
-本ドキュメントは初期の要求定義であり、今後詳細化する前提とする。
+本ドキュメントはプロジェクト全体の要求定義である。各機能の詳細仕様は `docs/requirements/` 配下の個別 PRD を参照する。
 
 ## 2. 開発前提
 
@@ -16,37 +16,82 @@
 - strict concurrency を遵守する。
 - UI は SwiftUI で実装する。
 - 状態管理には SwiftUI Observation の `@Observable` を使用する。
-- `ObservableObject` / `@Published` は原則として採用しない。必要な場合は比較対象または移行元の概念として扱う。
+- `ObservableObject` / `@Published` は原則として採用しない。
 - 非同期処理は Swift Concurrency の async/await と Task を使用する。
 - テストは Swift Testing を主に使用する。
+- `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` を設定済み。モジュール内の型・関数はデフォルトで `@MainActor` に隔離される。
 
 ### 2.2 GitHub API
 
-- 初期実装では unauthenticated な GitHub REST API を利用する。
-- API Client は将来的な認証機能追加を前提にし、token 付与や認証ヘッダー差し替えができる構造にする。
-- rate limit を考慮し、HTTP エラーとして扱えるようにする。
+- GitHub REST API を利用する。未認証・認証済みの両方に対応する。
+- 認証済みの場合は `AuthenticatedHttpClient` が Bearer トークンを自動付与する。
+- rate limit を考慮し、HTTP エラーとして扱えるようにする。rate limit の残量は設定画面で可視化する。
 - ページングは GitHub API のページ指定またはレスポンスヘッダーを扱える形で設計する。
 - Issue と Pull Request の判定は API レスポンス上の Pull Request 情報の有無で行う。
 
-### 2.3 初期スコープ外
+### 2.3 現在のスコープ外
 
-- 認証機能は初期実装では扱わない。ただし将来追加できる設計にする。
-- iPad 向けの複数カラム UI は初期実装では必須にしない。
-- deep link、タブ構成、独自 Coordinator / Router は初期実装では必須にしない。
-- 外部画像ライブラリは初期実装では採用しない。必要になった場合は要件を整理してから検討する。
-- 永続保存を前提にした独自画像 DB は初期実装では採用しない。
+- iPad 向けの複数カラム UI は現時点では必須にしない。
+- 外部画像ライブラリは採用しない。必要になった場合は要件を整理してから検討する。
+- 永続保存を前提にした独自画像 DB は採用しない。
 
 ## 3. 機能要件
 
 ### 3.1 リポジトリ検索
 
+> 詳細仕様: `docs/requirements/repository-search.md`
+
 - キーワードでリポジトリ検索ができる。
-- 入力に debounce が効いている。
+- 入力に debounce（300ms）が効いている。
 - 新しい検索時に前のリクエストがキャンセルされる。
 - 検索中は loading 表示を出す。
 - 結果が空なら empty 表示を出す。
-- エラー時は error 表示を出し、retry できる。
+- エラー時は error 表示を出し、retry できる。rate limit エラーは専用の表示を出す。
 - 検索結果をタップするとリポジトリ詳細画面へ遷移できる。
+
+#### 検索クエリビルダー
+
+- 以下の qualifier で検索条件を絞り込める。
+  - `language` — プログラミング言語
+  - `stars` — スター数の範囲（min / max）
+  - `pushed` — 最終プッシュ日の範囲（before / after / between）
+  - `topic` — トピック（複数指定可）
+  - `in` — 検索対象（name / description / readme / topics）
+- ソート条件を指定できる（stars / updated、asc / desc）。
+- 適用中の条件はチップ形式で表示され、個別に削除できる。
+
+#### 検索条件の永続化
+
+> 詳細仕様: `docs/requirements/search-condition-persistence.md`
+
+- qualifier とソート条件を UserDefaults に保存し、アプリ再起動時に復元する。
+- キーワードは保存対象外とする。
+- すべての qualifier がデフォルトに戻ったら保存データを自動削除する。
+- 保存データの破損時はデフォルト値にフォールバックする。
+
+#### 検索結果キャッシュ
+
+> 詳細仕様: `docs/requirements/repository-search-cache.md`
+
+- 同一クエリ（query + sort + page）の検索結果をメモリ内 LRU キャッシュに保持する（最大 100 エントリ）。
+- キャッシュヒット時は API を呼ばずに即座に結果を返す。
+- Pull to Refresh 時にキャッシュを無効化して API から再取得する。
+- TTL による自動失効は行わない。プロセス終了または明示的なリフレッシュでクリアされる。
+
+#### ページング
+
+- スクロールで次ページを取得できる（1 ページ 30 件、最大 1000 件）。
+- 次ページ取得中はフッターに loading 表示を出す。
+- 多重リクエストが発生しない。
+- 最終ページで止まる。
+- 次ページエラー時は一覧を保持したまま retry できる。
+
+#### Pull to Refresh
+
+- Pull to Refresh ができる。
+- Refresh 時にキャッシュが無効化され、API から再取得される。
+- Refresh 中は専用の loading 状態になる。
+- Refresh 後にページング状態が正しく復元される。
 
 ### 3.2 リポジトリ詳細
 
@@ -95,6 +140,40 @@
 - 画像ロード失敗時は fallback avatar を表示する。
 - avatar 画像の失敗は画面全体の error 状態にしない。
 
+### 3.6 GitHub 認証（OAuth Device Flow）
+
+> 詳細仕様: `docs/requirements/github-auth.md`
+
+- GitHub OAuth Device Flow による認証ができる。
+- 設定画面からログイン・ログアウトができる。
+- ログインフローでは device code を取得し、ユーザーコード（XXXX-XXXX 形式）と認証 URL を表示する。
+- ユーザーが GitHub 上で認可するまでポーリングで待機する。
+- 取得したアクセストークンは Keychain に安全に保存する。
+- アプリ起動時に Keychain からトークンを自動復元する。
+- 認証済みの場合、API リクエストに Bearer トークンを自動付与する。
+- 設定画面にユーザープロフィール（avatar / login / name）を表示する。プロフィールはキャッシュし、起動時にバックグラウンドで同期する。
+- API から 401 が返った場合は自動的にログアウトする。
+- rate limit の残量（limit / remaining）を設定画面に表示する。未認証は 60 req/h、認証済みは 5,000 req/h。
+- ログアウト時は確認ダイアログを表示する。
+- Device Flow のエラー状態（設定エラー・ネットワークエラー・アクセス拒否・トークン期限切れ）を適切に処理する。
+
+### 3.7 ブックマーク
+
+- リポジトリをブックマークに追加・削除できる。
+- ブックマーク一覧画面からリポジトリ詳細への遷移ができる。
+- ブックマーク状態はアプリ内で保持する。
+
+### 3.8 Deep Link
+
+> 詳細仕様: `docs/requirements/deeplink.md`
+
+- カスタム URL スキーム `githubclient://` によるディープリンクに対応する。
+- 対応ルート:
+  - `githubclient://repo/{owner}/{name}` — リポジトリ詳細を開く
+  - `githubclient://repo/{owner}/{name}/issues` — Issue 一覧を開く
+- NavigationStack のパスを自動構築し、正しい画面階層で表示する。
+- 不正な URL は静かに無視する。
+
 ## 4. 共通 UI 状態要件
 
 - loading / empty / error / loaded を区別して扱う。
@@ -115,13 +194,13 @@
 - API レスポンス DTO と UI 用 Model を分ける。
 - API 依存を差し替え可能にし、DI する。
 - 画像ロード依存も差し替え可能にし、Preview / Test で Mock を利用できるようにする。
-- 初期実装は unauthenticated API を利用するが、将来的な認証機能追加に備えて API Client の構造を閉じすぎない。
+- HttpClient プロトコルを基盤にし、認証時は AuthenticatedHttpClient でラップする。
 - ViewModel パターンに依存しない設計にする。
 
 ### 5.2 状態管理
 
 - `@Observable` な Observable Model が UI 状態を保持する。
-- UI 状態を保持する Observable Model は原則として `@MainActor` に隔離する。
+- `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` により、Observable Model はデフォルトで `@MainActor` に隔離される。
 - ナビゲーション状態は UI 状態の一部として扱い、typed route によって表現する。
 
 ### 5.3 非同期処理
@@ -138,7 +217,7 @@
 
 ### 5.4 debounce
 
-- 検索入力後、一定時間待ってから API を呼ぶ。
+- 検索入力後、一定時間（300ms）待ってから API を呼ぶ。
 - 途中入力で前の待機処理がキャンセルされる。
 - 古い検索結果が UI に反映されない。
 
@@ -146,10 +225,11 @@
 
 - ネットワークエラーを扱える。
 - HTTP エラーを扱える。
-- rate limit は HTTP エラーとして扱える。
+- rate limit は HTTP エラーとして扱え、専用の UI 状態で表現する。
 - デコードエラーを扱える。
 - エラー時に retry できる。
 - cancel はエラーとして扱わない。
+- 401 Unauthorized は認証トークンの失効として扱い、自動ログアウトする。
 
 ### 5.6 ナビゲーション
 
@@ -157,11 +237,12 @@
 - `NavigationView` は使用しない。
 - ナビゲーションはデータ駆動で表現し、`NavigationLink(value:)` と `.navigationDestination(for:)` を基本にする。
 - 遷移状態は `Hashable` な typed route の配列で保持する。
-- 型消去された `NavigationPath` は、異種ルートの永続化やより複雑な deep link 対応が必要になった場合に検討する。
 - route には画面構築に必要な最小限の識別子を保持し、API レスポンス DTO や大きな UI Model を直接保持しない。
 - `.navigationDestination(for:)` は `List` や `LazyVStack` などの lazy container の内側に置かず、`NavigationStack` から常に解決できる位置に定義する。
-- 独自 Coordinator / Router は初期実装では採用しない。deep link、認証フロー、タブ構成、iPad 対応などで必要性が出た場合に導入を検討する。
-- iPhone 向けの初期実装は `NavigationStack` を基本とする。iPad の複数カラム UI が必要になった場合は `NavigationSplitView` を検討する。
+- タブ構成は Search / Bookmarks / Settings の 3 タブで構成する。
+- AppCoordinator がタブごとのナビゲーション状態を管理し、ディープリンクからのパス構築にも対応する。
+- typed route はタブごとに定義する（SearchRoute / BookmarksRoute / SettingsRoute）。
+- iPhone 向けの実装は `NavigationStack` を基本とする。iPad の複数カラム UI が必要になった場合は `NavigationSplitView` を検討する。
 
 ### 5.7 画像ロード / キャッシュ
 
@@ -171,6 +252,19 @@
 - 画像用の `URLSessionConfiguration` / `URLCache` は API 用通信と分離可能な構造にする。
 - 画像キャッシュはメモリとディスクの両方を利用できる設計にする。
 - 画像ロードの共有状態を持つ場合は actor などで隔離し、strict concurrency を満たす。
+
+### 5.8 認証・セキュリティ
+
+- アクセストークンは Keychain に保存する。UserDefaults や平文保存は行わない。
+- GitHubAuthState がグローバルな認証状態を管理し、トークンの有無に応じて API クライアントの振る舞いが切り替わる。
+- RateLimitObserver が API レスポンスヘッダー（X-RateLimit-*）を監視し、設定画面で可視化する。
+
+### 5.9 永続化
+
+- 認証トークン: Keychain（KeychainStorage）
+- ユーザープロフィールキャッシュ: UserDefaults
+- 検索条件（qualifier / sort）: UserDefaults（RepositorySearchConditionStore）
+- 検索結果キャッシュ: メモリ内 LRU キャッシュ（プロセス終了でクリア）
 
 ## 6. Preview 要件
 
@@ -198,10 +292,20 @@
   - ページング成功 / 失敗
   - debounce が効いている
   - cancel 時に状態が壊れない
+  - 検索クエリビルダーの組み立てが正しい
+  - 検索条件の永続化と復元が正しい
+  - 検索結果キャッシュの LRU 動作が正しい
+  - Device Flow のポーリング・タイムアウト・キャンセルが正しい
+  - 認証状態のライフサイクル（トークン保存・復元・401 検知・ログアウト）が正しい
+  - AuthenticatedHttpClient の Bearer トークン付与と 401 検知が正しい
+  - ディープリンクの URL パースとルート構築が正しい
 
 ## 8. 完成条件
 
 - 検索、リポジトリ詳細、Issue / Pull Request 一覧、Issue / Pull Request 詳細のフローが動く。
+- 検索クエリビルダー（qualifier / sort）が正しく動作し、チップ表示される。
+- 検索条件がアプリ再起動後に復元される。
+- 検索結果キャッシュにより同一クエリの再検索が即座に返る。
 - debounce と cancel が正しく動作する。
 - ページングが安定して動く。
 - Pull to Refresh が正しく動く。
@@ -210,20 +314,33 @@
 - avatar 画像の placeholder / fallback / cache が機能している。
 - 非同期処理の競合で UI が壊れない。
 - strict concurrency の警告やエラーが残っていない。
+- GitHub OAuth Device Flow でログイン・ログアウトができる。
+- 認証済み API リクエストに Bearer トークンが付与される。
+- rate limit の残量が設定画面に表示される。
+- ディープリンク（`githubclient://repo/{owner}/{name}` 等）で正しい画面が開く。
+- ブックマーク一覧からリポジトリ詳細へ遷移できる。
 
+## 9. 個別 PRD 一覧
 
-## その他
-- 複雑な検索クエリの構築とそのUI
-- 検索条件の保存
+各機能の詳細な仕様（画面定義・状態遷移・AC・テスト要件）は以下の個別 PRD に記載されている。
+
+| ファイル | 機能 |
+|---|---|
+| `docs/requirements/repository-search.md` | リポジトリ検索（qualifier / sort / チップ表示） |
+| `docs/requirements/search-condition-persistence.md` | 検索条件の永続化 |
+| `docs/requirements/repository-search-cache.md` | 検索結果の LRU メモリキャッシュ |
+| `docs/requirements/github-auth.md` | GitHub OAuth Device Flow 認証 |
+| `docs/requirements/deeplink.md` | カスタム URL スキームによるディープリンク |
+
+## 10. 今後の検討事項
+
+以下は現時点で未実装であり、必要に応じて PRD を起こして開発する。
+
 - 検索履歴の保存
-- パフォーマンス面での、同じクエリ検索の時間キャッシュ
-- 宣言型ナビゲーション, DeepLink
-- 初回のハイライトチュートリアルの実装
-- Github Auth, keychain, ログイン・ログアウト 有料機能
+- 初回のハイライトチュートリアル
 - オフライン時の表示
-- 画像キャッシュや表示の最適化
-- レスポンシブ対応
-- WebViewの埋め込み
-- バックグラウンド更新（端末内のデータの最新化）、差分通知, in-flight request deduplication
-- テスト、E2Eテスト
+- レスポンシブ対応（iPad 複数カラム UI）
+- WebView の埋め込み
+- バックグラウンド更新（端末内データの最新化）・差分通知・in-flight request deduplication
+- E2E テスト
 - stale-while-revalidate
