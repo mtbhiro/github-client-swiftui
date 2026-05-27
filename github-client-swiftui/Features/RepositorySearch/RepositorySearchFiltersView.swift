@@ -1,12 +1,12 @@
 import SwiftUI
 
 private let isoDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.calendar = Calendar(identifier: .gregorian)
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.timeZone = .current
-    f.dateFormat = "yyyy-MM-dd"
-    return f
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = .current
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter
 }()
 
 struct RepositorySearchFiltersView: View {
@@ -53,8 +53,7 @@ struct RepositorySearchFiltersView: View {
                         Toggle(label(for: target), isOn: Binding(
                             get: { inTargets.contains(target) },
                             set: { newValue in
-                                if newValue { inTargets.insert(target) }
-                                else { inTargets.remove(target) }
+                                if newValue { inTargets.insert(target) } else { inTargets.remove(target) }
                             }
                         ))
                     }

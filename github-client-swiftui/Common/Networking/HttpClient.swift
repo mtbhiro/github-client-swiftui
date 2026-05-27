@@ -24,6 +24,7 @@ nonisolated enum ApiHost: Sendable {
     var baseURL: URL {
         switch self {
         case .github:
+            // swiftlint:disable:next force_unwrapping
             URL(string: "https://api.github.com")!
         case let .custom(url):
             url

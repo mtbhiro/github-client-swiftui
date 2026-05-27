@@ -19,6 +19,7 @@ nonisolated struct GitHubAuthHosts: Sendable {
     let api: ApiHost
 
     static let production = GitHubAuthHosts(
+        // swiftlint:disable:next force_unwrapping
         oauth: .custom(URL(string: "https://github.com")!),
         api: .github
     )

@@ -61,6 +61,7 @@ nonisolated struct GitHubUserDTO: Decodable, Sendable {
             login: login,
             id: id,
             avatarUrl: URL(string: avatarUrl),
+            // swiftlint:disable:next force_unwrapping
             htmlUrl: URL(string: htmlUrl)!
         )
     }

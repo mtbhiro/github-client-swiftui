@@ -5,6 +5,7 @@ nonisolated extension GitHubUser {
         login: "octocat",
         id: 1,
         avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/583231?v=4"),
+        // swiftlint:disable:next force_unwrapping
         htmlUrl: URL(string: "https://github.com/octocat")!
     )
 
@@ -12,6 +13,7 @@ nonisolated extension GitHubUser {
         login: "swift-dev",
         id: 12345,
         avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/12345?v=4"),
+        // swiftlint:disable:next force_unwrapping
         htmlUrl: URL(string: "https://github.com/swift-dev")!
     )
 }
@@ -31,6 +33,7 @@ nonisolated extension GitHubIssue {
         user: .sampleOctocat,
         labels: [.sampleBug],
         commentsCount: 5,
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-20T10:00:00Z")!,
         isPullRequest: false
     )
@@ -43,6 +46,7 @@ nonisolated extension GitHubIssue {
         user: .sampleDeveloper,
         labels: [.sampleDocumentation],
         commentsCount: 2,
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-10T08:30:00Z")!,
         isPullRequest: false
     )
@@ -55,6 +59,7 @@ nonisolated extension GitHubIssue {
         user: .sampleDeveloper,
         labels: [.sampleEnhancement],
         commentsCount: 12,
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-25T14:00:00Z")!,
         isPullRequest: true
     )
@@ -82,8 +87,11 @@ nonisolated extension GitHubIssueDetail {
         user: .sampleOctocat,
         labels: [.sampleBug],
         commentsCount: 5,
+        // swiftlint:disable:next force_unwrapping
         htmlUrl: URL(string: "https://github.com/apple/swift/issues/42")!,
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-20T10:00:00Z")!,
+        // swiftlint:disable:next force_unwrapping
         updatedAt: ISO8601DateFormatter().date(from: "2026-05-01T15:30:00Z")!
     )
 }
@@ -93,6 +101,7 @@ nonisolated extension GitHubIssueComment {
         id: 2001,
         user: .sampleDeveloper,
         body: "こちらの Issue を確認しました。修正PRを作成中です。",
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-21T09:00:00Z")!
     )
 
@@ -100,6 +109,7 @@ nonisolated extension GitHubIssueComment {
         id: 2002,
         user: .sampleOctocat,
         body: "ありがとうございます！関連する Issue として #38 も参照してください。\n\n`@MainActor` の隔離が必要なケースが他にもあるかもしれません。",
+        // swiftlint:disable:next force_unwrapping
         createdAt: ISO8601DateFormatter().date(from: "2026-04-21T11:30:00Z")!
     )
 

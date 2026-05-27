@@ -132,8 +132,8 @@ final class RepositorySearchModel {
                     page: 1
                 )
                 try Task.checkCancellation()
-                self.cache.invalidate(q: qString, sort: snapshotSort)
-                let key = RepositorySearchCache.Key(q: qString, sort: snapshotSort, page: 1)
+                self.cache.invalidate(query: qString, sort: snapshotSort)
+                let key = RepositorySearchCache.Key(query: qString, sort: snapshotSort, page: 1)
                 self.cache.put(key, value: result)
                 self.applyInitialResult(result, query: trimmed)
             } catch is CancellationError {
@@ -174,22 +174,22 @@ final class RepositorySearchModel {
             return
         }
 
-        var q = appliedQualifiers
+        var qualifiers = appliedQualifiers
         switch chip {
         case .keyword:
             return
         case .inTargets:
-            q.inTargets = []
+            qualifiers.inTargets = []
         case .language:
-            q.language = nil
+            qualifiers.language = nil
         case .stars:
-            q.stars = .init(min: nil, max: nil)
+            qualifiers.stars = .init(min: nil, max: nil)
         case .pushed:
-            q.pushed = .init(from: nil, to: nil)
+            qualifiers.pushed = .init(from: nil, to: nil)
         case let .topic(_, value):
-            q.topics.removeAll { $0 == value }
+            qualifiers.topics.removeAll { $0 == value }
         }
-        appliedQualifiers = q
+        appliedQualifiers = qualifiers
         persistConditionIfNeeded()
         fireSearch(debounce: false)
     }
@@ -231,7 +231,7 @@ final class RepositorySearchModel {
         }
 
         let qString = RepositorySearchQueryBuilder.build(keyword: trimmed, qualifiers: appliedQualifiers)
-        let cacheKey = makeCacheKey(q: qString, page: 1)
+        let cacheKey = makeCacheKey(query: qString, page: 1)
 
         // PRD AC-1.1: キャッシュ命中時は loading を経由せず同期的に loaded/noResults に直接遷移する。
         if let cached = cache.get(cacheKey) {
@@ -298,7 +298,7 @@ final class RepositorySearchModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let qString = RepositorySearchQueryBuilder.build(keyword: trimmed, qualifiers: appliedQualifiers)
         let nextPage = state.nextPage
-        let cacheKey = makeCacheKey(q: qString, page: nextPage)
+        let cacheKey = makeCacheKey(query: qString, page: nextPage)
 
         // PRD AC-3.2: 次ページがキャッシュ命中なら paging-loading を経由せず loaded のまま末尾に追記する。
         if let cached = cache.get(cacheKey) {
@@ -364,8 +364,8 @@ final class RepositorySearchModel {
         !reachedCap && lastPageCount >= perPage
     }
 
-    private func makeCacheKey(q: String, page: Int) -> RepositorySearchCache.Key {
-        RepositorySearchCache.Key(q: q, sort: sort, page: page)
+    private func makeCacheKey(query: String, page: Int) -> RepositorySearchCache.Key {
+        RepositorySearchCache.Key(query: query, sort: sort, page: page)
     }
 
     private func cancelCurrentTask() {

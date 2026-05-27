@@ -7,12 +7,6 @@ nonisolated struct AuthenticatedHttpClient: HttpClient {
     let authState: GitHubAuthState
     let rateLimit: RateLimitObserver
 
-    init(upstream: HttpClient, authState: GitHubAuthState, rateLimit: RateLimitObserver) {
-        self.upstream = upstream
-        self.authState = authState
-        self.rateLimit = rateLimit
-    }
-
     func sendWithResponseMetadata<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> HttpResponse<T> {
         let token = await authState.token
         let isGitHubAPI = Self.shouldAttachBearer(request: request)

@@ -38,6 +38,7 @@ nonisolated struct GitHubIssueDetailDTO: Decodable, Sendable {
             user: user.toDomain(),
             labels: labels.map { $0.toDomain() },
             commentsCount: comments,
+            // swiftlint:disable:next force_unwrapping
             htmlUrl: URL(string: htmlUrl)!,
             createdAt: formatter.date(from: createdAt) ?? .distantPast,
             updatedAt: formatter.date(from: updatedAt) ?? .distantPast

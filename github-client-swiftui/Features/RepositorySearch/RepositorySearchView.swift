@@ -67,8 +67,8 @@ struct RepositorySearchView: View {
                         case .loading:
                             ProgressView()
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        case let .noResults(q):
-                            noResultsView(query: q)
+                        case let .noResults(query):
+                            noResultsView(query: query)
                         case .errorNetwork:
                             errorNetworkView
                         case let .errorRateLimited(resetDate):
@@ -302,13 +302,13 @@ struct RepositorySearchView: View {
     }
 
     private static let rateLimitResetFormatter: DateFormatter = {
-        let f = DateFormatter()
+        let formatter = DateFormatter()
         // PRD §4.3.2: 端末ローカルタイムゾーンで yyyy-MM-dd HH:mm。
         // 数字フォーマット固定なので en_US_POSIX を使う。
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
-        f.dateFormat = "yyyy-MM-dd HH:mm"
-        return f
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter
     }()
 }
 

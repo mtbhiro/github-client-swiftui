@@ -7,6 +7,7 @@ struct RepositorySearchConditionStoreTests {
 
     private func makeDefaults() -> UserDefaults {
         let suiteName = "RepositorySearchConditionStoreTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return defaults

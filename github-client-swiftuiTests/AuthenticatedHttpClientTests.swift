@@ -19,6 +19,7 @@ struct AuthenticatedHttpClientTests {
 
     private func makeStorage() -> UserDefaultsStorage<GitHubAuthenticatedUser> {
         let suiteName = "AuthenticatedHttpClientTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return UserDefaultsStorage(key: "profile", defaults: defaults)
@@ -51,6 +52,7 @@ struct AuthenticatedHttpClientTests {
     @Test func signedIn_attachesBearerToken_andGitHubHeaders() async throws {
         let sut = makeSUT()
         sut.authState.completeSignIn(token: "gho_xxx", user: .sample)
+        // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
         sut.stub.respond(data: body, statusCode: 200)
         let request = HttpRequest(host: sut.stub.apiHost, path: "/user")
@@ -63,6 +65,7 @@ struct AuthenticatedHttpClientTests {
 
     @Test func signedOut_doesNotAttachBearer() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
         sut.stub.respond(data: body, statusCode: 200)
         let request = HttpRequest(host: sut.stub.apiHost, path: "/user")
@@ -76,6 +79,7 @@ struct AuthenticatedHttpClientTests {
         let sut = makeSUT()
         sut.authState.completeSignIn(token: "gho_xxx", user: .sample)
         let nonGitHub = makeNonGitHubStub()
+        // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
         nonGitHub.respond(data: body, statusCode: 200)
 
@@ -136,6 +140,7 @@ struct AuthenticatedHttpClientTests {
 
     @Test func successResponse_updatesRateLimitObserver() async throws {
         let sut = makeSUT(initialToken: "tok")
+        // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
         sut.stub.respond(data: body, statusCode: 200, headers: [
             "X-RateLimit-Limit": "5000",
@@ -166,6 +171,7 @@ struct AuthenticatedHttpClientTests {
     @Test func nonGitHubHost_doesNotUpdateRateLimit() async throws {
         let sut = makeSUT()
         let nonGitHub = makeNonGitHubStub()
+        // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
         nonGitHub.respond(data: body, statusCode: 200, headers: [
             "X-RateLimit-Limit": "5000",

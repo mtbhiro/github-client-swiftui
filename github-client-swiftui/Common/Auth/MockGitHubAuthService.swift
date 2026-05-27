@@ -115,6 +115,7 @@ nonisolated extension GitHubDeviceCode {
     static let sample = GitHubDeviceCode(
         deviceCode: "sample-device-code",
         userCode: "WDJB-MJHT",
+        // swiftlint:disable:next force_unwrapping
         verificationURL: URL(string: "https://github.com/login/device")!,
         expiresIn: 900,
         interval: 5

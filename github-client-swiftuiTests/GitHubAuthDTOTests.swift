@@ -5,6 +5,7 @@ import Testing
 struct GitHubDeviceCodeDTOTests {
 
     @Test func decode_typicalResponse_mapsToDomain() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = """
         {
             "device_code": "3584d83530557fdd1f46af8289938c8ef79f9dc5",
@@ -29,6 +30,7 @@ struct GitHubDeviceCodeDTOTests {
 struct GitHubAuthTokenResponseDTOTests {
 
     @Test func decode_success_returnsAccessToken() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = """
         {
             "access_token": "gho_xxx",
@@ -47,6 +49,7 @@ struct GitHubAuthTokenResponseDTOTests {
     }
 
     @Test func decode_authorizationPending_returnsPending() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"authorization_pending","error_description":"The user has not yet authorized."}"#.data(using: .utf8)!
         let dto = try JSONDecoder().decode(GitHubAuthTokenResponseDTO.self, from: json)
         if case .pending = dto.outcome { } else {
@@ -55,6 +58,7 @@ struct GitHubAuthTokenResponseDTOTests {
     }
 
     @Test func decode_slowDown_returnsSlowDown() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"slow_down","error_description":"Too many requests."}"#.data(using: .utf8)!
         let dto = try JSONDecoder().decode(GitHubAuthTokenResponseDTO.self, from: json)
         if case .slowDown = dto.outcome { } else {
@@ -63,6 +67,7 @@ struct GitHubAuthTokenResponseDTOTests {
     }
 
     @Test func decode_accessDenied_returnsAccessDenied() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"access_denied","error_description":"The user denied."}"#.data(using: .utf8)!
         let dto = try JSONDecoder().decode(GitHubAuthTokenResponseDTO.self, from: json)
         if case .accessDenied = dto.outcome { } else {
@@ -71,6 +76,7 @@ struct GitHubAuthTokenResponseDTOTests {
     }
 
     @Test func decode_expiredToken_returnsExpired() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"expired_token","error_description":"The token has expired."}"#.data(using: .utf8)!
         let dto = try JSONDecoder().decode(GitHubAuthTokenResponseDTO.self, from: json)
         if case .expiredToken = dto.outcome { } else {
@@ -79,6 +85,7 @@ struct GitHubAuthTokenResponseDTOTests {
     }
 
     @Test func decode_unknownError_returnsOtherError() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"unsupported_grant_type","error_description":"unknown"}"#.data(using: .utf8)!
         let dto = try JSONDecoder().decode(GitHubAuthTokenResponseDTO.self, from: json)
         if case let .otherError(code) = dto.outcome {
@@ -92,6 +99,7 @@ struct GitHubAuthTokenResponseDTOTests {
 struct GitHubAuthenticatedUserDTOTests {
 
     @Test func decode_withName_mapsName() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = """
         {
             "login": "octocat",
@@ -110,6 +118,7 @@ struct GitHubAuthenticatedUserDTOTests {
     }
 
     @Test func decode_nullName_mapsToNil() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = """
         {
             "login": "octocat",

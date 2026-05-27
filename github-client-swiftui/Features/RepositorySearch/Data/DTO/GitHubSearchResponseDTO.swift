@@ -48,9 +48,11 @@ nonisolated struct GitHubRepoDTO: Decodable, Sendable {
                 login: owner.login,
                 id: owner.id,
                 avatarUrl: URL(string: owner.avatarUrl),
+                // swiftlint:disable:next force_unwrapping
                 htmlUrl: URL(string: owner.htmlUrl)!
             ),
             description: description,
+            // swiftlint:disable:next force_unwrapping
             htmlUrl: URL(string: htmlUrl)!,
             stargazersCount: stargazersCount,
             forksCount: forksCount,

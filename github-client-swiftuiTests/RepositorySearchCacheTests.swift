@@ -28,11 +28,11 @@ struct RepositorySearchCacheTests {
     }
 
     private func makeKey(
-        q: String = "swift",
+        query: String = "swift",
         sort: RepositorySearchSort = .default,
         page: Int = 1
     ) -> RepositorySearchCache.Key {
-        RepositorySearchCache.Key(q: q, sort: sort, page: page)
+        RepositorySearchCache.Key(query: query, sort: sort, page: page)
     }
 
     // MARK: - 命中 / 未登録
@@ -56,11 +56,11 @@ struct RepositorySearchCacheTests {
 
     @Test func keys_differingInQ_areTreatedAsSeparateEntries() {
         let cache = RepositorySearchCache()
-        cache.put(makeKey(q: "swift"), value: makeResult(repoNames: ["x"]))
-        cache.put(makeKey(q: "rust"), value: makeResult(repoNames: ["y"]))
+        cache.put(makeKey(query: "swift"), value: makeResult(repoNames: ["x"]))
+        cache.put(makeKey(query: "rust"), value: makeResult(repoNames: ["y"]))
 
-        #expect(cache.get(makeKey(q: "swift"))?.repositories.first?.fullName.name == "x")
-        #expect(cache.get(makeKey(q: "rust"))?.repositories.first?.fullName.name == "y")
+        #expect(cache.get(makeKey(query: "swift"))?.repositories.first?.fullName.name == "x")
+        #expect(cache.get(makeKey(query: "rust"))?.repositories.first?.fullName.name == "y")
     }
 
     @Test func keys_differingInSortKey_areTreatedAsSeparateEntries() {
@@ -108,29 +108,29 @@ struct RepositorySearchCacheTests {
     @Test func capacity_isCappedAt100_andEvictsLeastRecentlyUsed_onPut() {
         let cache = RepositorySearchCache()
         for i in 0..<100 {
-            cache.put(makeKey(q: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
+            cache.put(makeKey(query: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
         }
         // 101 件目を投入 → アクセス順で最古の q0 が退避される
-        cache.put(makeKey(q: "q100"), value: makeResult(repoNames: ["r100"]))
+        cache.put(makeKey(query: "q100"), value: makeResult(repoNames: ["r100"]))
 
-        #expect(cache.get(makeKey(q: "q0")) == nil)
-        #expect(cache.get(makeKey(q: "q1"))?.repositories.first?.fullName.name == "r1")
-        #expect(cache.get(makeKey(q: "q100"))?.repositories.first?.fullName.name == "r100")
+        #expect(cache.get(makeKey(query: "q0")) == nil)
+        #expect(cache.get(makeKey(query: "q1"))?.repositories.first?.fullName.name == "r1")
+        #expect(cache.get(makeKey(query: "q100"))?.repositories.first?.fullName.name == "r100")
     }
 
     @Test func get_promotesEntryAsRecentlyUsed_andProtectsItFromEviction() {
         // §5.4: get 成功でアクセス順が更新される
         let cache = RepositorySearchCache()
         for i in 0..<100 {
-            cache.put(makeKey(q: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
+            cache.put(makeKey(query: "q\(i)"), value: makeResult(repoNames: ["r\(i)"]))
         }
         // q0 を touch して最新化
-        _ = cache.get(makeKey(q: "q0"))
+        _ = cache.get(makeKey(query: "q0"))
         // 101 件目を投入 → 今度は q0 ではなく次に古い q1 が退避される
-        cache.put(makeKey(q: "q100"), value: makeResult(repoNames: ["r100"]))
+        cache.put(makeKey(query: "q100"), value: makeResult(repoNames: ["r100"]))
 
-        #expect(cache.get(makeKey(q: "q0"))?.repositories.first?.fullName.name == "r0")
-        #expect(cache.get(makeKey(q: "q1")) == nil)
+        #expect(cache.get(makeKey(query: "q0"))?.repositories.first?.fullName.name == "r0")
+        #expect(cache.get(makeKey(query: "q1")) == nil)
     }
 
     // MARK: - invalidate (§5.7, AC-6.1)
@@ -140,17 +140,17 @@ struct RepositorySearchCacheTests {
         let stars = RepositorySearchSort(key: .stars, order: .desc)
         let updated = RepositorySearchSort(key: .updated, order: .desc)
 
-        cache.put(makeKey(q: "swift", sort: stars, page: 1), value: makeResult(repoNames: ["s1"]))
-        cache.put(makeKey(q: "swift", sort: stars, page: 2), value: makeResult(repoNames: ["s2"]))
-        cache.put(makeKey(q: "swift", sort: updated, page: 1), value: makeResult(repoNames: ["u1"]))
-        cache.put(makeKey(q: "rust", sort: stars, page: 1), value: makeResult(repoNames: ["r1"]))
+        cache.put(makeKey(query: "swift", sort: stars, page: 1), value: makeResult(repoNames: ["s1"]))
+        cache.put(makeKey(query: "swift", sort: stars, page: 2), value: makeResult(repoNames: ["s2"]))
+        cache.put(makeKey(query: "swift", sort: updated, page: 1), value: makeResult(repoNames: ["u1"]))
+        cache.put(makeKey(query: "rust", sort: stars, page: 1), value: makeResult(repoNames: ["r1"]))
 
-        cache.invalidate(q: "swift", sort: stars)
+        cache.invalidate(query: "swift", sort: stars)
 
-        #expect(cache.get(makeKey(q: "swift", sort: stars, page: 1)) == nil)
-        #expect(cache.get(makeKey(q: "swift", sort: stars, page: 2)) == nil)
+        #expect(cache.get(makeKey(query: "swift", sort: stars, page: 1)) == nil)
+        #expect(cache.get(makeKey(query: "swift", sort: stars, page: 2)) == nil)
         // 別ソート・別クエリは残る
-        #expect(cache.get(makeKey(q: "swift", sort: updated, page: 1))?.repositories.first?.fullName.name == "u1")
-        #expect(cache.get(makeKey(q: "rust", sort: stars, page: 1))?.repositories.first?.fullName.name == "r1")
+        #expect(cache.get(makeKey(query: "swift", sort: updated, page: 1))?.repositories.first?.fullName.name == "u1")
+        #expect(cache.get(makeKey(query: "rust", sort: stars, page: 1))?.repositories.first?.fullName.name == "r1")
     }
 }

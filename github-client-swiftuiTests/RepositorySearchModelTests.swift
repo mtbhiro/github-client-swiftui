@@ -15,6 +15,7 @@ struct RepositorySearchModelTests {
             searchResult: searchResult ?? .success(.init(repositories: GitHubRepo.samples, totalCount: GitHubRepo.samples.count, incompleteResults: false))
         )
         let suiteName = "RepositorySearchModelTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         let store = RepositorySearchConditionStore(defaults: defaults)

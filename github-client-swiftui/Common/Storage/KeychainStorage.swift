@@ -5,11 +5,6 @@ nonisolated struct KeychainStorage: Sendable {
     let service: String
     let account: String
 
-    init(service: String, account: String) {
-        self.service = service
-        self.account = account
-    }
-
     func save(_ value: String) throws {
         let data = Data(value.utf8)
 

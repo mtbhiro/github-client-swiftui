@@ -104,6 +104,7 @@ struct GitHubRepoDTOTests {
     }
 
     @Test func decodingJSON_parsesCorrectly() throws {
+        // swiftlint:disable:next force_unwrapping
         let json = """
         {
             "total_count": 1,

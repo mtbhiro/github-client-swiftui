@@ -32,6 +32,7 @@ struct GitHubAuthServiceTests {
 
     @Test func requestDeviceCode_success_returnsDomain() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"""
         {
             "device_code": "abc",
@@ -58,6 +59,7 @@ struct GitHubAuthServiceTests {
 
     @Test func requestDeviceCode_includesClientIDAndScope_inQuery() async throws {
         let sut = makeSUT(clientID: "ci-xyz")
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"device_code":"x","user_code":"X","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -77,6 +79,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_success_returnsToken() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"access_token":"gho_xxx","token_type":"bearer","scope":"read:user"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -90,6 +93,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_authorizationPending_returnsPending() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"authorization_pending"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -101,6 +105,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_slowDown_returnsSlowDown() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"slow_down"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -112,6 +117,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_accessDenied_returnsAccessDenied() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"access_denied"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -123,6 +129,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_expiredToken_returnsExpired() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"expired_token"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -134,6 +141,7 @@ struct GitHubAuthServiceTests {
 
     @Test func pollAccessToken_includesDeviceCode_andGrantType() async throws {
         let sut = makeSUT(clientID: "ci")
+        // swiftlint:disable:next force_unwrapping
         let json = #"{"error":"authorization_pending"}"#.data(using: .utf8)!
         sut.oauth.respond(data: json, statusCode: 200)
 
@@ -150,6 +158,7 @@ struct GitHubAuthServiceTests {
 
     @Test func fetchAuthenticatedUser_success_returnsUser() async throws {
         let sut = makeSUT()
+        // swiftlint:disable:next force_unwrapping
         let json = #"""
         {
             "login": "octo",

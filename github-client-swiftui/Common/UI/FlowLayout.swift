@@ -22,24 +22,24 @@ struct FlowLayout: Layout {
     private func layout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
         let maxWidth = proposal.width ?? .infinity
         var positions: [CGPoint] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
         var rowHeight: CGFloat = 0
         var maxX: CGFloat = 0
 
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
+            if xOffset + size.width > maxWidth, xOffset > 0 {
+                xOffset = 0
+                yOffset += rowHeight + spacing
                 rowHeight = 0
             }
-            positions.append(CGPoint(x: x, y: y))
+            positions.append(CGPoint(x: xOffset, y: yOffset))
             rowHeight = max(rowHeight, size.height)
-            x += size.width + spacing
-            maxX = max(maxX, x - spacing)
+            xOffset += size.width + spacing
+            maxX = max(maxX, xOffset - spacing)
         }
 
-        return (CGSize(width: maxX, height: y + rowHeight), positions)
+        return (CGSize(width: maxX, height: yOffset + rowHeight), positions)
     }
 }

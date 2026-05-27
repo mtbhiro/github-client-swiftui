@@ -34,6 +34,7 @@ struct BookmarkStoreTests {
 
     private func makePersistentStore() -> (store: BookmarkStore, defaults: UserDefaults) {
         let suiteName = "BookmarkStoreTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return (BookmarkStore(defaults: defaults), defaults)

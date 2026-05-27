@@ -7,6 +7,7 @@ struct GitHubAuthStateTests {
 
     private func makeStorage() -> UserDefaultsStorage<GitHubAuthenticatedUser> {
         let suiteName = "GitHubAuthStateTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return UserDefaultsStorage(key: "profile", defaults: defaults)

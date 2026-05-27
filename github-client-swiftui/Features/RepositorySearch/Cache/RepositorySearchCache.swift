@@ -6,7 +6,7 @@ import Foundation
 final class RepositorySearchCache {
 
     struct Key: Hashable, Sendable {
-        let q: String
+        let query: String
         let sort: RepositorySearchSort
         let page: Int
     }
@@ -30,8 +30,8 @@ final class RepositorySearchCache {
     }
 
     /// 指定したクエリ + ソートに紐づく全ページのエントリを破棄する (Pull-to-refresh で使用、AC-6.1)。
-    func invalidate(q: String, sort: RepositorySearchSort) {
-        let targets = entries.keys.filter { $0.q == q && $0.sort == sort }
+    func invalidate(query: String, sort: RepositorySearchSort) {
+        let targets = entries.keys.filter { $0.query == query && $0.sort == sort }
         for key in targets {
             entries.removeValue(forKey: key)
         }

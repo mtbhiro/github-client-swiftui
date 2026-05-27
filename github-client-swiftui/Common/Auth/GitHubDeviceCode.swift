@@ -27,6 +27,7 @@ nonisolated struct GitHubDeviceCodeDTO: Decodable, Sendable {
         GitHubDeviceCode(
             deviceCode: deviceCode,
             userCode: userCode,
+            // swiftlint:disable:next force_unwrapping
             verificationURL: URL(string: verificationURI) ?? URL(string: "https://github.com/login/device")!,
             expiresIn: expiresIn,
             interval: interval

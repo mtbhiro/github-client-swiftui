@@ -23,6 +23,7 @@ struct RepositorySearchModelCacheTests {
             ))
         )
         let suiteName = "RepositorySearchModelCacheTests.\(UUID().uuidString)"
+        // swiftlint:disable:next force_unwrapping
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         let store = RepositorySearchConditionStore(defaults: defaults)
@@ -42,6 +43,7 @@ struct RepositorySearchModelCacheTests {
                 fullName: GitHubRepoFullName(ownerLogin: "owner", name: "repo-\(id)"),
                 owner: .sampleApple,
                 description: nil,
+                // swiftlint:disable:next force_unwrapping
                 htmlUrl: URL(string: "https://github.com/owner/repo-\(id)")!,
                 stargazersCount: 0,
                 forksCount: 0,
@@ -119,7 +121,7 @@ struct RepositorySearchModelCacheTests {
         await waitForInflight(model)
 
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key2 = RepositorySearchCache.Key(q: qString, sort: .default, page: 2)
+        let key2 = RepositorySearchCache.Key(query: qString, sort: .default, page: 2)
         cache.put(key2, value: .init(repositories: page2, totalCount: 40, incompleteResults: false))
 
         let baseline = await mock.searchCallCount
@@ -193,7 +195,7 @@ struct RepositorySearchModelCacheTests {
         let after = await mock.searchCallCount
         #expect(after == baseline + 1)
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key2 = RepositorySearchCache.Key(q: qString, sort: .default, page: 2)
+        let key2 = RepositorySearchCache.Key(query: qString, sort: .default, page: 2)
         #expect(cache.get(key2) != nil)
     }
 
@@ -243,7 +245,7 @@ struct RepositorySearchModelCacheTests {
         #expect(model.phase == .errorNetwork)
 
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
+        let key = RepositorySearchCache.Key(query: qString, sort: .default, page: 1)
         #expect(cache.get(key) == nil)
 
         await mock.setSearchResult(.success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false)))
@@ -301,7 +303,7 @@ struct RepositorySearchModelCacheTests {
         await waitForInflight(model)
 
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
+        let key = RepositorySearchCache.Key(query: qString, sort: .default, page: 1)
         #expect(cache.get(key) == nil)
     }
 
@@ -360,7 +362,7 @@ struct RepositorySearchModelCacheTests {
 
         // 新しい結果がキャッシュに登録されている
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key1 = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
+        let key1 = RepositorySearchCache.Key(query: qString, sort: .default, page: 1)
         #expect(cache.get(key1)?.repositories == refreshed.repositories)
     }
 
@@ -428,7 +430,7 @@ struct RepositorySearchModelCacheTests {
             return
         }
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key1 = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
+        let key1 = RepositorySearchCache.Key(query: qString, sort: .default, page: 1)
         #expect(cache.get(key1)?.repositories == initial.repositories)
 
         await mock.setSearchResult(.failure(URLError(.notConnectedToInternet)))
@@ -448,15 +450,15 @@ struct RepositorySearchModelCacheTests {
     @Test func refresh_dropsAllPagesForCurrentCondition_keepingOtherEntries() {
         let cache = RepositorySearchCache()
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
-        let key1 = RepositorySearchCache.Key(q: qString, sort: .default, page: 1)
-        let key2 = RepositorySearchCache.Key(q: qString, sort: .default, page: 2)
-        let otherQ = RepositorySearchCache.Key(q: "other", sort: .default, page: 1)
+        let key1 = RepositorySearchCache.Key(query: qString, sort: .default, page: 1)
+        let key2 = RepositorySearchCache.Key(query: qString, sort: .default, page: 2)
+        let otherQ = RepositorySearchCache.Key(query: "other", sort: .default, page: 1)
         let dummy = RepositorySearchPageResult(repositories: [], totalCount: 0, incompleteResults: false)
         cache.put(key1, value: dummy)
         cache.put(key2, value: dummy)
         cache.put(otherQ, value: dummy)
 
-        cache.invalidate(q: qString, sort: .default)
+        cache.invalidate(query: qString, sort: .default)
 
         #expect(cache.get(key1) == nil)
         #expect(cache.get(key2) == nil)

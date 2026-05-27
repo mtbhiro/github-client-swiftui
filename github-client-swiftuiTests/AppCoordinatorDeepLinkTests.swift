@@ -90,6 +90,7 @@ struct AppCoordinatorDeepLinkTests {
         let searchBefore = c.searchPath
         let bookmarksBefore = c.bookmarksPath
         let settingsBefore = c.settingsPath
+        // swiftlint:disable:next force_unwrapping
         c.handle(deepLink: URL(string: urlString)!)
         #expect(c.selectedTab == tabBefore)
         #expect(c.searchPath == searchBefore)

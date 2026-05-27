@@ -4,7 +4,6 @@ excluded:
 disabled_rules:
   - trailing_comma
   - blanket_disable_command
-  - statement_position
 
 opt_in_rules:
   - force_unwrapping
@@ -28,25 +27,24 @@ opt_in_rules:
   - overridden_super_call
   - prohibited_super_call
   - yoda_condition
-  - closure_body_length
+  # closure_body_length はデフォルト30行で SwiftUI View body に厳しすぎるため除外
+  # - closure_body_length
   - collection_alignment
   - multiline_arguments
   - multiline_parameters
   - vertical_whitespace_closing_braces
 
 force_cast: error
-force_unwrapping:
-  severity: warning
+force_unwrapping: error
+
+identifier_name:
+  excluded:
+    - id
+    - to
 
 type_name:
   excluded:
     - github_client_swiftuiApp
-
-identifier_name:
-  min_length: 1
-  excluded:
-    - id
-    - i
 
 line_length:
   warning: 150
@@ -61,16 +59,12 @@ file_length:
   error: 800
 
 function_body_length:
-  warning: 80
-  error: 150
-
-closure_body_length:
-  warning: 50
+  warning: 65
   error: 100
 
 cyclomatic_complexity:
-  warning: 10
-  error: 20
+  warning: 15
+  error: 25
 
 custom_rules:
   unchecked_sendable:
