@@ -41,15 +41,7 @@ enum RepositorySearchPhase: Sendable, Equatable {
 
 @Observable
 final class RepositorySearchModel {
-    var query: String = "" {
-        didSet {
-            guard query != oldValue else { return }
-            guard !suppressQueryDidSet else { return }
-            onQueryChanged()
-        }
-    }
-
-    private var suppressQueryDidSet = false
+    var query: String = ""
 
     private(set) var phase: RepositorySearchPhase = .idle
     private(set) var appliedQualifiers: RepositorySearchQualifiers = .empty
@@ -166,10 +158,7 @@ final class RepositorySearchModel {
 
     func removeChip(_ chip: RepositorySearchChip) {
         if case .keyword = chip {
-            // keyword 削除も他のチップ削除と同じく即時再検索する。
-            // query の didSet 経由（debounce: true）と挙動を分けないため、
-            // 一旦 didSet を抑止して値だけ更新し、明示的に fireSearch(debounce: false) を呼ぶ。
-            setQueryWithoutFiring("")
+            query = ""
             fireSearch(debounce: false)
             return
         }
@@ -194,12 +183,6 @@ final class RepositorySearchModel {
         fireSearch(debounce: false)
     }
 
-    private func setQueryWithoutFiring(_ newValue: String) {
-        suppressQueryDidSet = true
-        query = newValue
-        suppressQueryDidSet = false
-    }
-
     // MARK: - Pagination
 
     func loadNextPageIfNeeded() {
@@ -215,8 +198,14 @@ final class RepositorySearchModel {
 
     // MARK: - Internals
 
-    private func onQueryChanged() {
+    func onQueryChanged() {
         fireSearch(debounce: true)
+    }
+
+    func setQuery(_ newValue: String) {
+        guard query != newValue else { return }
+        query = newValue
+        onQueryChanged()
     }
 
     private func fireSearch(debounce: Bool) {

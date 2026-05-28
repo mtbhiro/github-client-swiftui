@@ -113,7 +113,7 @@ struct RepositorySearchModelPersistenceTests {
         ))
 
         let (model, mock, _, _) = makeSUT(defaults: defaults)
-        model.query = "ui"
+        model.setQuery("ui")
         await waitForInflight(model)
 
         await #expect(mock.searchCallCount == 1)
@@ -225,11 +225,11 @@ struct RepositorySearchModelPersistenceTests {
     @Test func keywordChanges_doNotPersist() async {
         let (model, _, store, _) = makeSUT()
 
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         #expect(store.load() == nil)
 
-        model.query = ""
+        model.setQuery("")
         await waitForInflight(model)
         #expect(store.load() == nil)
     }
@@ -250,7 +250,7 @@ struct RepositorySearchModelPersistenceTests {
         let (model, mock, store, _) = makeSUT(
             searchResult: .success(.init(repositories: page1, totalCount: 100, incompleteResults: false))
         )
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         #expect(store.load() == nil) // キーワード変更だけでは保存しない
 

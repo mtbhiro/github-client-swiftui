@@ -35,20 +35,30 @@ nonisolated struct GitHubRepoDetailDTO: Decodable, Sendable {
         case updatedAt = "updated_at"
     }
 
-    func toDomain() -> GitHubRepoDetail {
+    func toDomain() throws -> GitHubRepoDetail {
         let formatter = ISO8601DateFormatter()
+        guard let ownerHtmlUrl = URL(string: owner.htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "owner.htmlUrl", value: owner.htmlUrl)
+        }
+        guard let repoHtmlUrl = URL(string: htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "htmlUrl", value: htmlUrl)
+        }
+        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+            throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
+        }
+        guard let parsedUpdatedAt = formatter.date(from: updatedAt) else {
+            throw DTOMappingError.invalidDate(field: "updatedAt", value: updatedAt)
+        }
         return GitHubRepoDetail(
             fullName: GitHubRepoFullName(ownerLogin: owner.login, name: name),
             owner: GitHubRepoOwner(
                 login: owner.login,
                 id: owner.id,
                 avatarUrl: URL(string: owner.avatarUrl),
-                // swiftlint:disable:next force_unwrapping
-                htmlUrl: URL(string: owner.htmlUrl)!
+                htmlUrl: ownerHtmlUrl
             ),
             description: description,
-            // swiftlint:disable:next force_unwrapping
-            htmlUrl: URL(string: htmlUrl)!,
+            htmlUrl: repoHtmlUrl,
             stargazersCount: stargazersCount,
             watchersCount: watchersCount,
             forksCount: forksCount,
@@ -56,8 +66,8 @@ nonisolated struct GitHubRepoDetailDTO: Decodable, Sendable {
             language: language,
             topics: topics ?? [],
             defaultBranch: defaultBranch,
-            createdAt: formatter.date(from: createdAt) ?? .distantPast,
-            updatedAt: formatter.date(from: updatedAt) ?? .distantPast
+            createdAt: parsedCreatedAt,
+            updatedAt: parsedUpdatedAt
         )
     }
 }

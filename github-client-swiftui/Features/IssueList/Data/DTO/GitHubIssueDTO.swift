@@ -23,17 +23,20 @@ nonisolated struct GitHubIssueDTO: Decodable, Sendable {
         case pullRequest = "pull_request"
     }
 
-    func toDomain() -> GitHubIssue {
+    func toDomain() throws -> GitHubIssue {
         let formatter = ISO8601DateFormatter()
+        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+            throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
+        }
         return GitHubIssue(
             id: id,
             number: number,
             title: title,
             state: IssueState(rawValue: state) ?? .open,
-            user: user.toDomain(),
+            user: try user.toDomain(),
             labels: labels.map { $0.toDomain() },
             commentsCount: comments,
-            createdAt: formatter.date(from: createdAt) ?? .distantPast,
+            createdAt: parsedCreatedAt,
             isPullRequest: pullRequest != nil
         )
     }
@@ -56,13 +59,15 @@ nonisolated struct GitHubUserDTO: Decodable, Sendable {
         case htmlUrl = "html_url"
     }
 
-    func toDomain() -> GitHubUser {
-        GitHubUser(
+    func toDomain() throws -> GitHubUser {
+        guard let userHtmlUrl = URL(string: htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "user.htmlUrl", value: htmlUrl)
+        }
+        return GitHubUser(
             login: login,
             id: id,
             avatarUrl: URL(string: avatarUrl),
-            // swiftlint:disable:next force_unwrapping
-            htmlUrl: URL(string: htmlUrl)!
+            htmlUrl: userHtmlUrl
         )
     }
 }

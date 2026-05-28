@@ -27,21 +27,29 @@ nonisolated struct GitHubIssueDetailDTO: Decodable, Sendable {
         case updatedAt = "updated_at"
     }
 
-    func toDomain() -> GitHubIssueDetail {
+    func toDomain() throws -> GitHubIssueDetail {
         let formatter = ISO8601DateFormatter()
+        guard let issueHtmlUrl = URL(string: htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "htmlUrl", value: htmlUrl)
+        }
+        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+            throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
+        }
+        guard let parsedUpdatedAt = formatter.date(from: updatedAt) else {
+            throw DTOMappingError.invalidDate(field: "updatedAt", value: updatedAt)
+        }
         return GitHubIssueDetail(
             id: id,
             number: number,
             title: title,
             body: body,
             state: IssueState(rawValue: state) ?? .open,
-            user: user.toDomain(),
+            user: try user.toDomain(),
             labels: labels.map { $0.toDomain() },
             commentsCount: comments,
-            // swiftlint:disable:next force_unwrapping
-            htmlUrl: URL(string: htmlUrl)!,
-            createdAt: formatter.date(from: createdAt) ?? .distantPast,
-            updatedAt: formatter.date(from: updatedAt) ?? .distantPast
+            htmlUrl: issueHtmlUrl,
+            createdAt: parsedCreatedAt,
+            updatedAt: parsedUpdatedAt
         )
     }
 }
@@ -59,13 +67,16 @@ nonisolated struct GitHubIssueCommentDTO: Decodable, Sendable {
         case createdAt = "created_at"
     }
 
-    func toDomain() -> GitHubIssueComment {
+    func toDomain() throws -> GitHubIssueComment {
         let formatter = ISO8601DateFormatter()
+        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+            throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
+        }
         return GitHubIssueComment(
             id: id,
-            user: user.toDomain(),
+            user: try user.toDomain(),
             body: body,
-            createdAt: formatter.date(from: createdAt) ?? .distantPast
+            createdAt: parsedCreatedAt
         )
     }
 }

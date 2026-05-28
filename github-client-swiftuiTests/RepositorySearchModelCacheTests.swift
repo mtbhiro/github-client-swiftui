@@ -61,7 +61,7 @@ struct RepositorySearchModelCacheTests {
 
     @Test func sameQuery_doesNotCallApi_andSkipsLoading() async {
         let (model, mock, _) = makeSUT()
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         let baseline = await mock.searchCallCount
         guard case let .loaded(initialState) = model.phase else {
@@ -69,9 +69,9 @@ struct RepositorySearchModelCacheTests {
             return
         }
 
-        model.query = "different"
+        model.setQuery("different")
         await waitForInflight(model)
-        model.query = "swift"
+        model.setQuery("swift")
         // キャッシュ命中なら同期的に直接 .loaded に遷移し、loading を経由しない (AC-1.1)
         guard case let .loaded(hitState) = model.phase else {
             Issue.record("Expected loaded immediately (cache hit), got \(model.phase)")
@@ -89,16 +89,16 @@ struct RepositorySearchModelCacheTests {
 
     @Test func roundtripQuery_returnsFirstFromCache_withoutRefetching() async {
         let (model, mock, _) = makeSUT()
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         let baselineAfterSwift = await mock.searchCallCount
 
-        model.query = "swifty"
+        model.setQuery("swifty")
         await waitForInflight(model)
         let baselineAfterSwifty = await mock.searchCallCount
         #expect(baselineAfterSwifty == baselineAfterSwift + 1)
 
-        model.query = "swift"
+        model.setQuery("swift")
         guard case .loaded = model.phase else {
             Issue.record("Expected loaded immediately on roundtrip, got \(model.phase)")
             return
@@ -117,7 +117,7 @@ struct RepositorySearchModelCacheTests {
         let (model, mock, cache) = makeSUT(
             searchResult: .success(.init(repositories: page1, totalCount: 40, incompleteResults: false))
         )
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
 
         let qString = RepositorySearchQueryBuilder.build(keyword: "swift", qualifiers: .empty)
@@ -150,7 +150,7 @@ struct RepositorySearchModelCacheTests {
         let (model, mock, _) = makeSUT(
             searchResult: .success(.init(repositories: page1, totalCount: 100, incompleteResults: false))
         )
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         guard case let .loaded(state1) = model.phase else {
             Issue.record("Expected loaded after first fetch")
@@ -184,7 +184,7 @@ struct RepositorySearchModelCacheTests {
         let (model, mock, cache) = makeSUT(
             searchResult: .success(.init(repositories: page1, totalCount: 100, incompleteResults: false))
         )
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         let page2 = makeRepos(count: 30, startId: 31)
         await mock.setSearchResult(.success(.init(repositories: page2, totalCount: 100, incompleteResults: false)))
@@ -213,7 +213,7 @@ struct RepositorySearchModelCacheTests {
             incompleteResults: false
         )
         let (model, mock, _) = makeSUT(searchResult: .success(starsResult))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
 
         await mock.setSearchResult(.success(updatedResult))
@@ -240,7 +240,7 @@ struct RepositorySearchModelCacheTests {
 
     @Test func errorResults_areNotCached() async {
         let (model, mock, cache) = makeSUT(searchResult: .failure(URLError(.notConnectedToInternet)))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         #expect(model.phase == .errorNetwork)
 
@@ -262,7 +262,7 @@ struct RepositorySearchModelCacheTests {
         let (model, mock, _) = makeSUT(
             searchResult: .success(.init(repositories: [], totalCount: 0, incompleteResults: false))
         )
-        model.query = "nonexistent"
+        model.setQuery("nonexistent")
         await waitForInflight(model)
         guard case .noResults = model.phase else {
             Issue.record("Expected noResults after first fetch")
@@ -270,11 +270,11 @@ struct RepositorySearchModelCacheTests {
         }
 
         await mock.setSearchResult(.success(.init(repositories: GitHubRepo.samples, totalCount: 3, incompleteResults: false)))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
 
         let baseline = await mock.searchCallCount
-        model.query = "nonexistent"
+        model.setQuery("nonexistent")
         guard case let .noResults(q) = model.phase else {
             Issue.record("Expected noResults immediately on cache hit, got \(model.phase)")
             return
@@ -297,7 +297,7 @@ struct RepositorySearchModelCacheTests {
             }
             throw CancellationError()
         }
-        model.query = "swift"
+        model.setQuery("swift")
         for await _ in handlerReached.stream { break }
         model.onDisappear()
         await waitForInflight(model)
@@ -311,16 +311,16 @@ struct RepositorySearchModelCacheTests {
 
     @Test func cacheHit_phaseIsIndistinguishableFromNormalLoaded() async {
         let (model, _, _) = makeSUT()
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         guard case let .loaded(first) = model.phase else {
             Issue.record("Expected loaded")
             return
         }
 
-        model.query = "other"
+        model.setQuery("other")
         await waitForInflight(model)
-        model.query = "swift"
+        model.setQuery("swift")
         guard case let .loaded(hit) = model.phase else {
             Issue.record("Expected loaded on cache hit")
             return
@@ -342,7 +342,7 @@ struct RepositorySearchModelCacheTests {
             incompleteResults: false
         )
         let (model, mock, cache) = makeSUT(searchResult: .success(initial))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
 
         // 同条件で再検索しても cache 命中なので API は増えない
@@ -379,7 +379,7 @@ struct RepositorySearchModelCacheTests {
             incompleteResults: false
         )
         let (model, mock, _) = makeSUT(searchResult: .success(initial))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         guard case let .loaded(initialState) = model.phase else {
             Issue.record("Expected loaded after initial fetch")
@@ -423,7 +423,7 @@ struct RepositorySearchModelCacheTests {
             incompleteResults: false
         )
         let (model, mock, cache) = makeSUT(searchResult: .success(initial))
-        model.query = "swift"
+        model.setQuery("swift")
         await waitForInflight(model)
         guard case let .loaded(initialState) = model.phase else {
             Issue.record("Expected loaded after initial fetch")

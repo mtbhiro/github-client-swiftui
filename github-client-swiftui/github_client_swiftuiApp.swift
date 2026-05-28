@@ -38,7 +38,7 @@ struct AuthStack {
         let rateLimit = RateLimitObserver()
         let factory = AuthFactory(service: service)
         let httpClient = AuthenticatedHttpClient(
-            upstream: URLSessionHttpClient(),
+            upstream: URLSessionHttpClient(session: URLSessionHttpClient.makeDefaultSession()),
             authState: authState,
             rateLimit: rateLimit
         )

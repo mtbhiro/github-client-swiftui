@@ -107,6 +107,10 @@ struct RepositorySearchView: View {
                     )
                 }
             }
+            .onChange(of: model.query) { oldValue, newValue in
+                guard newValue != oldValue else { return }
+                model.onQueryChanged()
+            }
             .sheet(isPresented: $isShowingFilters) {
                 RepositorySearchFiltersView(initial: model.appliedQualifiers) { qualifiers in
                     model.applyQualifiers(qualifiers)

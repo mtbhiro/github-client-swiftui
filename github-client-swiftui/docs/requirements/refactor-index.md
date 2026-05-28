@@ -6,10 +6,10 @@
 
 | # | タスク | ファイル | ステータス |
 |---|--------|----------|-----------|
-| 1 | [DTO の force unwrap 除去](refactor-dto-force-unwrap.md) | DTO 各種 | 未着手 |
-| 2 | [suppressQueryDidSet フラグ除去](refactor-suppress-query-didset.md) | RepositorySearchModel | 未着手 |
-| 3 | [Environment デフォルト値の Mock 排除](refactor-environment-default-mock.md) | GithubRepoRepository | 未着手 |
-| 4 | [ネットワークタイムアウトの設定](refactor-network-timeout.md) | URLSessionHttpClient | 未着手 |
+| 1 | [DTO の force unwrap 除去](refactor-dto-force-unwrap.md) | DTO 各種 | 完了 |
+| 2 | [suppressQueryDidSet フラグ除去](refactor-suppress-query-didset.md) | RepositorySearchModel | 完了 |
+| 3 | [Environment デフォルト値の Mock 排除](refactor-environment-default-mock.md) | GithubRepoRepository | 完了 |
+| 4 | [ネットワークタイムアウトの設定](refactor-network-timeout.md) | URLSessionHttpClient | 完了 |
 
 ## 優先度: 中（設計の一貫性・DRY）
 

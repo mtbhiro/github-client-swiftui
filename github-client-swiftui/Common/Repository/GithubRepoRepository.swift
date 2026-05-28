@@ -42,7 +42,7 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         let request = HttpRequest(path: "/search/repositories", queryItems: queryItems)
         let response: GitHubSearchResponseDTO = try await httpClient.send(request)
         return RepositorySearchPageResult(
-            repositories: response.toDomain(),
+            repositories: try response.toDomain(),
             totalCount: response.totalCount,
             incompleteResults: response.incompleteResults
         )
@@ -51,7 +51,7 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
     func fetchRepository(fullName: GitHubRepoFullName) async throws -> GitHubRepoDetail {
         let request = HttpRequest(path: "/repos/\(fullName.ownerLogin)/\(fullName.name)")
         let response: GitHubRepoDetailDTO = try await httpClient.send(request)
-        return response.toDomain()
+        return try response.toDomain()
     }
 
     func fetchIssues(fullName: GitHubRepoFullName, page: Int) async throws -> [GitHubIssue] {
@@ -64,13 +64,13 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
             ]
         )
         let response: [GitHubIssueDTO] = try await httpClient.send(request)
-        return response.map { $0.toDomain() }
+        return try response.map { try $0.toDomain() }
     }
 
     func fetchIssueDetail(fullName: GitHubRepoFullName, number: Int) async throws -> GitHubIssueDetail {
         let request = HttpRequest(path: "/repos/\(fullName.ownerLogin)/\(fullName.name)/issues/\(number)")
         let response: GitHubIssueDetailDTO = try await httpClient.send(request)
-        return response.toDomain()
+        return try response.toDomain()
     }
 
     func fetchIssueComments(fullName: GitHubRepoFullName, number: Int, page: Int) async throws -> [GitHubIssueComment] {
@@ -82,14 +82,18 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
             ]
         )
         let response: [GitHubIssueCommentDTO] = try await httpClient.send(request)
-        return response.map { $0.toDomain() }
+        return try response.map { try $0.toDomain() }
     }
 }
 
 private struct GithubRepoRepositoryEnvironmentKey: EnvironmentKey {
-    // Preview / Test で .environment 未注入のまま動くよう Mock をデフォルトに置く。
-    // 本番では `AuthStack` が必ず認証付きの実体を注入する。
-    static let defaultValue: any GithubRepoRepositoryProtocol = MockGithubRepoRepository()
+    static let defaultValue: any GithubRepoRepositoryProtocol = {
+        #if DEBUG
+        return MockGithubRepoRepository()
+        #else
+        fatalError("githubRepository environment key not injected")
+        #endif
+    }()
 }
 
 extension EnvironmentValues {

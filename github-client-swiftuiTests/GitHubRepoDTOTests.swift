@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 struct GitHubRepoDTOTests {
 
-    @Test func toDomain_convertsCorrectly() {
+    @Test func toDomain_convertsCorrectly() throws {
         let ownerDTO = GitHubOwnerDTO(
             login: "apple",
             id: 10639145,
@@ -25,7 +25,7 @@ struct GitHubRepoDTOTests {
             topics: ["swift", "compiler"]
         )
 
-        let repo = repoDTO.toDomain()
+        let repo = try repoDTO.toDomain()
 
         #expect(repo.fullName == GitHubRepoFullName(ownerLogin: "apple", name: "swift"))
         #expect(String(describing: repo.fullName) == "apple/swift")
@@ -40,7 +40,7 @@ struct GitHubRepoDTOTests {
         #expect(repo.topics == ["swift", "compiler"])
     }
 
-    @Test func toDomain_nilTopics_becomesEmptyArray() {
+    @Test func toDomain_nilTopics_becomesEmptyArray() throws {
         let ownerDTO = GitHubOwnerDTO(
             login: "test",
             id: 1,
@@ -60,14 +60,14 @@ struct GitHubRepoDTOTests {
             topics: nil
         )
 
-        let repo = repoDTO.toDomain()
+        let repo = try repoDTO.toDomain()
 
         #expect(repo.topics.isEmpty)
         #expect(repo.description == nil)
         #expect(repo.language == nil)
     }
 
-    @Test func searchResponseToDomain_convertsAllItems() {
+    @Test func searchResponseToDomain_convertsAllItems() throws {
         let ownerDTO = GitHubOwnerDTO(
             login: "org",
             id: 1,
@@ -95,7 +95,7 @@ struct GitHubRepoDTOTests {
             ]
         )
 
-        let repos = response.toDomain()
+        let repos = try response.toDomain()
 
         #expect(repos.count == 2)
         #expect(repos[0].fullName.name == "repo1")

@@ -11,8 +11,8 @@ nonisolated struct GitHubSearchResponseDTO: Decodable, Sendable {
         case items
     }
 
-    func toDomain() -> [GitHubRepo] {
-        items.map { $0.toDomain() }
+    func toDomain() throws -> [GitHubRepo] {
+        try items.map { try $0.toDomain() }
     }
 }
 
@@ -41,19 +41,23 @@ nonisolated struct GitHubRepoDTO: Decodable, Sendable {
         case topics
     }
 
-    func toDomain() -> GitHubRepo {
-        GitHubRepo(
+    func toDomain() throws -> GitHubRepo {
+        guard let ownerHtmlUrl = URL(string: owner.htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "owner.htmlUrl", value: owner.htmlUrl)
+        }
+        guard let repoHtmlUrl = URL(string: htmlUrl) else {
+            throw DTOMappingError.invalidURL(field: "htmlUrl", value: htmlUrl)
+        }
+        return GitHubRepo(
             fullName: GitHubRepoFullName(ownerLogin: owner.login, name: name),
             owner: GitHubRepoOwner(
                 login: owner.login,
                 id: owner.id,
                 avatarUrl: URL(string: owner.avatarUrl),
-                // swiftlint:disable:next force_unwrapping
-                htmlUrl: URL(string: owner.htmlUrl)!
+                htmlUrl: ownerHtmlUrl
             ),
             description: description,
-            // swiftlint:disable:next force_unwrapping
-            htmlUrl: URL(string: htmlUrl)!,
+            htmlUrl: repoHtmlUrl,
             stargazersCount: stargazersCount,
             forksCount: forksCount,
             language: language,

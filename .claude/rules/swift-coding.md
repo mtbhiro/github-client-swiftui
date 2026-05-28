@@ -48,6 +48,8 @@
 - 層は **View / Observable Model / Repository / API Client** の 4 層を基本にする。それぞれの責務を混ぜない。
 - 状態は **`enum` で表現可能なら enum** を優先する（`idle / loading / loaded(...) / empty / error(...)` 等）。複数の `Bool` フラグで状態を表現しない。
 - **抽象化は前倒しにしない**。同じパターンが 2 回出た時点では抽象化しない。3 回目で初めて検討する。
+- **`didSet` で副作用（API 呼び出し・Task 生成など）を発火しない**。`didSet` 副作用 + 抑制フラグ（`suppressXxx`）のパターンは状態遷移が暗黙的になり壊れやすい。プロパティは値の保持に徹し、副作用は明示的なメソッド呼び出しか View の `.onChange(of:)` で発火する。
+- **DI の `EnvironmentKey.defaultValue` に Mock を入れない**。注入漏れが本番で黙って Mock 動作になりバグを隠蔽する。`#if DEBUG` で Mock / Release で `fatalError` にするか、Protocol に対して明示的に注入を必須にする。
 
 ## 3. ナビゲーション
 
@@ -86,7 +88,20 @@
   - `await model.inFlightTask?.value` で Task 完了を待つパターンでは、Task が確実にセットされてから await すること。Task のライフサイクル（開始・完了・キャンセル）を明確に追えない設計のテストは書き直す。
   - テストがハングする（タイムアウトなしで永久に返らない）のは **最悪のケース**。CI もローカルも止まる。ハングの可能性があるテストを書いたら、そのテストだけを 10 回連続で実行して安定性を確認する。
 
-## 7. コーディングスタイル（プロジェクト方針）
+## 7. 防御的データ変換・ネットワーク
+
+### 7.1 DTO → ドメインモデル変換
+
+- **外部入力（API レスポンス）を `!` で強制アンラップしない**。`URL(string:)!`・`date(from:)!` 等は API が不正値を返した時点でクラッシュする。`guard let ... else { throw }` で `DTOMappingError` を投げる。
+- **silent fallback（`?? .distantPast` 等）を使わない**。不正値を黙ってデフォルトに置き換えると、UI に意味不明な表示（紀元前の日付など）が出て原因追跡が困難になる。変換に失敗したら `throws` でエラーを伝播し、Repository 層で適切にハンドリングする。
+- `toDomain()` は原則 `throws` にし、呼び出し元（Repository）の既存の `throws` チェーンに乗せる。
+
+### 7.2 ネットワーククライアント
+
+- **`URLSession.shared` を本番コードでそのまま使わない**。OS デフォルトのタイムアウト（60 秒）はモバイルアプリには長すぎる。専用の `URLSessionConfiguration` でタイムアウト（`timeoutIntervalForRequest` / `timeoutIntervalForResource`）を明示的に設定する。
+- テスト用の `StubURLProtocol` セッションには影響しないため、本番用ファクトリメソッド（`makeDefaultSession()` 等）で設定を集約する。
+
+## 8. コーディングスタイル（プロジェクト方針）
 
 - **コメントは最小限**。意図が自明なコメントは書かない。WHY が非自明なときだけ短く残す（CLAUDE.md の方針）。
 - **既存規約の再掲を避ける**。CLAUDE.md / requirements.md にあるルールはコード内コメントで繰り返さない。
@@ -94,7 +109,7 @@
 - 削除コードに `// removed` 等のマーカーを残さない。削除はそのまま削除する（git で履歴は追える）。
 - フォーマットは既存ファイルに揃える。新規ファイルでは Xcode のデフォルト（4-space indent）に従う。
 
-## 8. 困ったときの参照先
+## 9. 困ったときの参照先
 
 挙動・設計に迷ったら **推測で書かず**、以下を順に当たる:
 
@@ -111,7 +126,7 @@
    - `xcodebuild-mcp.md` — XcodeBuildMCP / AXe の既知の癖
 4. **Apple 公式ドキュメント**: `mcp__cupertino__search` / `mcp__cupertino__read_document` / `mcp__cupertino__search_concurrency` / `mcp__cupertino__search_symbols`。Swift Concurrency・SwiftUI Observation・NavigationStack・URLSession などフレームワーク挙動の細部はここで一次ソースを取る。
 
-## 9. やってはいけないこと（チェックリスト）
+## 10. やってはいけないこと（チェックリスト）
 
 - [ ] `@unchecked Sendable` を使った（SwiftLint で自動検出）
 - [ ] `ObservableObject` / `@Published` を新規に導入した
@@ -123,6 +138,11 @@
 - [ ] §6 の代替策を検討せずに `@Suite(.serialized)` を貼った
 - [ ] タスク（=テストファイル）ごとに `mcp__XcodeBuildMCP__test_sim` を `-only-testing:` 単発で呼んだ — シミュレータが多重起動するので、複数タスク分のテストを 1 回の `test_sim` にまとめる（`-only-testing` は繰り返し指定可、詳細は `docs/pitfalls/xcodebuild-mcp.md`）
 - [ ] flaky テストを書いた / 既存テストを flaky にした — 並列実行で 100% 安定して通らないテストはマージ禁止。Mock のバリデーション省略（本物と異なる分岐）や `intervalScale: 0.0` での無限ループ、タイミング依存の assertion は全てハングや flaky の原因になる
+- [ ] 外部入力（API レスポンス）に対して `!` で強制アンラップした — `URL(string:)!` / `date(from:)!` 等。`guard let` + `throw` を使う（§7.1）
+- [ ] DTO 変換で silent fallback（`?? .distantPast` / `?? ""` 等）を使った — 不正値はエラーとして伝播する（§7.1）
+- [ ] `didSet` で副作用（API 呼び出し・Task 生成）を発火した — 明示的メソッドか `.onChange(of:)` を使う（§2）
+- [ ] `EnvironmentKey.defaultValue` に本番で動く Mock を入れた — `#if DEBUG` ガードを付ける（§2）
+- [ ] `URLSession.shared` を本番コードでタイムアウト設定なしに使った — 専用 Configuration を作る（§7.2）
 
 上記のいずれかに該当しそうになったら、コードを書く手を止めて理由を整理する。
 

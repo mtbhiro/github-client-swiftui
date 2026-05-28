@@ -1,6 +1,6 @@
 # RepositorySearchModel の suppressQueryDidSet フラグ除去
 
-## ステータス: 未着手
+## ステータス: 完了
 
 ## 概要
 

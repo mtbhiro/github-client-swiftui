@@ -12,6 +12,13 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         self.decoder = decoder
     }
 
+    static func makeDefaultSession() -> URLSession {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }
+
     func sendWithResponseMetadata<T: Decodable & Sendable>(_ request: HttpRequest) async throws -> HttpResponse<T> {
         let urlRequest = try buildURLRequest(from: request)
 
