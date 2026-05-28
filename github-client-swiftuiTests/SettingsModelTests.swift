@@ -44,34 +44,34 @@ struct SettingsModelTests {
         await model.inFlightTask?.value
     }
 
-    // MARK: - profileState
+    // MARK: - profilePhase
 
     @Test func signedOut_yieldsHiddenProfile() {
         let sut = makeSUT()
-        #expect(sut.model.profileState == .hidden)
+        #expect(sut.model.profilePhase == .hidden)
     }
 
     @Test func signedIn_withoutUser_yieldsLoadingProfile() {
         let sut = makeSUT(initialToken: "tok")
-        #expect(sut.model.profileState == .loading)
+        #expect(sut.model.profilePhase == .loading)
     }
 
     @Test func signedIn_withFreshUser_yieldsLoadedProfile() {
         let sut = makeSUT(initialToken: "tok")
         sut.authState.completeSignIn(token: "tok", user: .sample)
-        if case let .loaded(u) = sut.model.profileState {
+        if case let .loaded(u) = sut.model.profilePhase {
             #expect(u == .sample)
         } else {
-            Issue.record("Expected .loaded, got \(sut.model.profileState)")
+            Issue.record("Expected .loaded, got \(sut.model.profilePhase)")
         }
     }
 
     @Test func signedIn_withCachedUser_yieldsCachedProfile() {
         let sut = makeSUT(initialToken: "tok", cachedProfile: .sample)
-        if case let .cached(u) = sut.model.profileState {
+        if case let .cached(u) = sut.model.profilePhase {
             #expect(u == .sample)
         } else {
-            Issue.record("Expected .cached, got \(sut.model.profileState)")
+            Issue.record("Expected .cached, got \(sut.model.profilePhase)")
         }
     }
 
@@ -84,12 +84,12 @@ struct SettingsModelTests {
             cachedProfile: .sample,
             userResult: .success(fresh)
         )
-        #expect(sut.model.profileState == .cached(.sample))
+        #expect(sut.model.profilePhase == .cached(.sample))
 
         sut.model.refreshProfile()
         await waitForInflight(sut.model)
 
-        #expect(sut.model.profileState == .loaded(fresh))
+        #expect(sut.model.profilePhase == .loaded(fresh))
         #expect(sut.profileCache.load() == fresh)
     }
 
@@ -99,12 +99,12 @@ struct SettingsModelTests {
             cachedProfile: .sample,
             userResult: .failure(URLError(.notConnectedToInternet))
         )
-        #expect(sut.model.profileState == .cached(.sample))
+        #expect(sut.model.profilePhase == .cached(.sample))
 
         sut.model.refreshProfile()
         await waitForInflight(sut.model)
 
-        #expect(sut.model.profileState == .cached(.sample))
+        #expect(sut.model.profilePhase == .cached(.sample))
     }
 
     @Test func refreshProfile_whenSignedOut_doesNothing() async {
@@ -125,8 +125,8 @@ struct SettingsModelTests {
     @Test func confirmLogout_signsOut_andResetsRateLimit() {
         let sut = makeSUT(initialToken: "tok")
         sut.rateLimit.update(from: [
-            "X-RateLimit-Limit": "5000",
-            "X-RateLimit-Remaining": "4999",
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4999",
         ])
         sut.model.requestLogout()
         sut.model.confirmLogout()
@@ -154,8 +154,8 @@ struct SettingsModelTests {
     @Test func onAuthPhaseChanged_resetsRateLimit() {
         let sut = makeSUT()
         sut.rateLimit.update(from: [
-            "X-RateLimit-Limit": "60",
-            "X-RateLimit-Remaining": "30",
+            "x-ratelimit-limit": "60",
+            "x-ratelimit-remaining": "30",
         ])
         sut.model.onAuthPhaseChanged()
         #expect(sut.rateLimit.snapshot == nil)

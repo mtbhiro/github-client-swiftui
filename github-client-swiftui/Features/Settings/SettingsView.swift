@@ -76,7 +76,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func authSection(model: SettingsModel) -> some View {
-        switch model.profileState {
+        switch model.profilePhase {
         case .hidden:
             Button {
                 authState.beginSigningIn()
@@ -130,33 +130,7 @@ struct SettingsView: View {
     }
 
     private func avatar(url: URL?) -> some View {
-        Group {
-            if let url {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        Circle().fill(.gray.opacity(0.2))
-                    case let .success(image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        fallbackAvatar
-                    @unknown default:
-                        fallbackAvatar
-                    }
-                }
-            } else {
-                fallbackAvatar
-            }
-        }
-        .frame(width: 48, height: 48)
-        .clipShape(Circle())
-    }
-
-    private var fallbackAvatar: some View {
-        Image(systemName: "person.crop.circle")
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(.gray)
+        AvatarImageView(url: url, size: 48)
     }
 
     private func logoutButton(model: SettingsModel) -> some View {

@@ -321,7 +321,7 @@ struct RepositorySearchModelTests {
         let error = HttpClientError.httpError(
             statusCode: 429,
             data: Data(),
-            headers: ["X-RateLimit-Reset": "1700000000"]
+            headers: ["x-ratelimit-reset": "1700000000"]
         )
         let (model, _) = makeSUT(searchResult: .failure(error))
         model.setQuery("swift")
@@ -337,7 +337,7 @@ struct RepositorySearchModelTests {
         let error = HttpClientError.httpError(
             statusCode: 403,
             data: Data(),
-            headers: ["X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"]
+            headers: ["x-ratelimit-remaining": "0", "x-ratelimit-reset": "1700000000"]
         )
         let (model, _) = makeSUT(searchResult: .failure(error))
         model.setQuery("swift")

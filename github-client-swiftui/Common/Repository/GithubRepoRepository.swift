@@ -30,7 +30,7 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "per_page", value: "30"),
+            URLQueryItem(name: "per_page", value: PaginationConstants.itemsPerPageString),
         ]
         if let sort {
             queryItems.append(URLQueryItem(name: "sort", value: sort))
@@ -60,7 +60,7 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
             queryItems: [
                 URLQueryItem(name: "state", value: "all"),
                 URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "per_page", value: "30"),
+                URLQueryItem(name: "per_page", value: PaginationConstants.itemsPerPageString),
             ]
         )
         let response: [GitHubIssueDTO] = try await httpClient.send(request)
@@ -78,7 +78,7 @@ nonisolated struct GithubRepoRepository: GithubRepoRepositoryProtocol {
             path: "/repos/\(fullName.ownerLogin)/\(fullName.name)/issues/\(number)/comments",
             queryItems: [
                 URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "per_page", value: "30"),
+                URLQueryItem(name: "per_page", value: PaginationConstants.itemsPerPageString),
             ]
         )
         let response: [GitHubIssueCommentDTO] = try await httpClient.send(request)

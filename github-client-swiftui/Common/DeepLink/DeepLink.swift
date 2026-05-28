@@ -30,7 +30,7 @@ enum DeepLink: Hashable, Sendable {
         }
     }
 
-    var searchPath: [SearchRoute] {
+    var searchPath: [ContentRoute] {
         switch self {
         case let .repositoryDetail(fullName):
             return [.repositoryDetail(fullName)]

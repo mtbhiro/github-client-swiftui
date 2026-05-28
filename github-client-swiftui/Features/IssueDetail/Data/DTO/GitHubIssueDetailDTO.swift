@@ -28,14 +28,13 @@ nonisolated struct GitHubIssueDetailDTO: Decodable, Sendable {
     }
 
     func toDomain() throws -> GitHubIssueDetail {
-        let formatter = ISO8601DateFormatter()
         guard let issueHtmlUrl = URL(string: htmlUrl) else {
             throw DTOMappingError.invalidURL(field: "htmlUrl", value: htmlUrl)
         }
-        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+        guard let parsedCreatedAt = DateFormatters.iso8601.date(from: createdAt) else {
             throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
         }
-        guard let parsedUpdatedAt = formatter.date(from: updatedAt) else {
+        guard let parsedUpdatedAt = DateFormatters.iso8601.date(from: updatedAt) else {
             throw DTOMappingError.invalidDate(field: "updatedAt", value: updatedAt)
         }
         return GitHubIssueDetail(
@@ -68,8 +67,7 @@ nonisolated struct GitHubIssueCommentDTO: Decodable, Sendable {
     }
 
     func toDomain() throws -> GitHubIssueComment {
-        let formatter = ISO8601DateFormatter()
-        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+        guard let parsedCreatedAt = DateFormatters.iso8601.date(from: createdAt) else {
             throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
         }
         return GitHubIssueComment(

@@ -47,6 +47,7 @@
 - 状態管理は **SwiftUI Observation の `@Observable`** を使う。`ObservableObject` / `@Published` は採用しない。
 - 層は **View / Observable Model / Repository / API Client** の 4 層を基本にする。それぞれの責務を混ぜない。
 - 状態は **`enum` で表現可能なら enum** を優先する（`idle / loading / loaded(...) / empty / error(...)` 等）。複数の `Bool` フラグで状態を表現しない。
+- **Phase enum の一貫性**: Model が持つ Phase enum は **Model のネスト型**として定義する（例: `RepositorySearchModel.Phase`）。関連する値型（`LoadedState` 等）も同様にネストする。Phase には **`Sendable, Equatable`** を付ける。
 - **抽象化は前倒しにしない**。同じパターンが 2 回出た時点では抽象化しない。3 回目で初めて検討する。
 - **`didSet` で副作用（API 呼び出し・Task 生成など）を発火しない**。`didSet` 副作用 + 抑制フラグ（`suppressXxx`）のパターンは状態遷移が暗黙的になり壊れやすい。プロパティは値の保持に徹し、副作用は明示的なメソッド呼び出しか View の `.onChange(of:)` で発火する。
 - **DI の `EnvironmentKey.defaultValue` に Mock を入れない**。注入漏れが本番で黙って Mock 動作になりバグを隠蔽する。`#if DEBUG` で Mock / Release で `fatalError` にするか、Protocol に対して明示的に注入を必須にする。
@@ -56,7 +57,9 @@
 - ナビゲーションは **`NavigationStack` のデータ駆動** を基本にする。`NavigationView` は使わない。
 - `NavigationLink(value:)` と `.navigationDestination(for:)` を使う。
 - 遷移状態は **`Hashable` な typed route の配列** で保持する。route には画面構築に必要な最小限の識別子だけを持たせる（API 取得済みのモデル全体を載せない）。
-- 既存の `Common/Navigation/AppRoute.swift` / `AppCoordinator.swift` のパターンに合わせる。
+- **同じ遷移先を複数の Route enum で別々に定義しない**。複数のタブ・画面から到達できる遷移先は **1 つの Route enum** にまとめる（例: `ContentRoute`）。Route の重複は遷移ロジックの重複に直結する。
+- **`.navigationDestination(for:)` を複数の View にコピペしない**。同一 Route に対する destination 構築は **ViewModifier に抽出**して共有する（例: `ContentRouteDestination`）。新しいルートを追加したとき 1 箇所だけ変更すればよい状態にする。
+- 既存の `Common/Navigation/AppRoute.swift` / `AppCoordinator.swift` / `ContentRouteDestination.swift` のパターンに合わせる。
 - 詳細は `github-client-swiftui/docs/guide/navigation-guide.md` を参照する。
 
 ## 4. SwiftUI Preview
@@ -100,8 +103,31 @@
 
 - **`URLSession.shared` を本番コードでそのまま使わない**。OS デフォルトのタイムアウト（60 秒）はモバイルアプリには長すぎる。専用の `URLSessionConfiguration` でタイムアウト（`timeoutIntervalForRequest` / `timeoutIntervalForResource`）を明示的に設定する。
 - テスト用の `StubURLProtocol` セッションには影響しないため、本番用ファクトリメソッド（`makeDefaultSession()` 等）で設定を集約する。
+- **HTTP レスポンスヘッダはクライアント層で小文字に正規化する**。`HTTPURLResponse.allHeaderFields` のキーは HTTP/1.1 ではサーバー依存の大文字小文字を返す。`URLSessionHttpClient.headerMap` で `lowercased()` して返し、消費側では常に小文字キーで参照する。消費側で大文字・小文字の両方を試すフォールバックを書かない。
 
-## 8. コーディングスタイル（プロジェクト方針）
+### 7.3 構造化ログ
+
+- **`print` / `debugPrint` ではなく `os.Logger` を使う**。`Common/Logging/AppLogger.swift` にカテゴリ別の Logger 定義（`.auth` / `.network` / `.rateLimit` / `.cache` 等）を集約している。新しいカテゴリが必要なときはここに追加する。
+- ログレベルを使い分ける: 通常動作は `debug`、注意すべき状態（レート制限低下等）は `warning`、失敗は `error`。
+- **privacy annotation を意識する**: ユーザー入力やパス等は `privacy: .public` を明示しない限りデフォルトでリダクトされる。デバッグに必要な情報は意図的に `privacy: .public` を付ける。
+
+## 8. DRY・共通化
+
+### 8.1 UI コンポーネント
+
+- **同じ見た目・構造の UI パーツを複数の View にコピペしない**。2 箇所以上で使う UI パターン（avatar 画像表示、エラー状態表示、空状態表示など）は `Common/` 以下に再利用可能な View として切り出す。既存の `AvatarImageView` / `ErrorStateView` のパターンを踏襲する。
+
+### 8.2 定数・Formatter
+
+- **マジックナンバーを複数箇所に散らさない**。ページサイズ等、複数ファイルで参照される値は専用の定数型（`PaginationConstants` 等）にまとめる。`Common/` 以下に配置し `nonisolated enum: Sendable` で定義する。
+- **`DateFormatter` / `ISO8601DateFormatter` は都度生成しない**。生成コストが高い。`Common/Formatting/DateFormatters.swift` にシングルトンとして集約する。新しいフォーマットが必要なときはここに追加する。`nonisolated(unsafe)` は `ISO8601DateFormatter` のように `Sendable` 非準拠の型にのみ付ける。
+
+### 8.3 ロジックの冗長排除
+
+- **全ケースが同じ値を返す `switch` を書かない**。`enum` の computed property で全ケースが同一の結果を返すなら、`switch` を介さず直接値を返す。
+- **Protocol の default 実装でカバーできる共通ロジックを各 conformance で繰り返さない**。
+
+## 9. コーディングスタイル（プロジェクト方針）
 
 - **コメントは最小限**。意図が自明なコメントは書かない。WHY が非自明なときだけ短く残す（CLAUDE.md の方針）。
 - **既存規約の再掲を避ける**。CLAUDE.md / requirements.md にあるルールはコード内コメントで繰り返さない。
@@ -109,7 +135,7 @@
 - 削除コードに `// removed` 等のマーカーを残さない。削除はそのまま削除する（git で履歴は追える）。
 - フォーマットは既存ファイルに揃える。新規ファイルでは Xcode のデフォルト（4-space indent）に従う。
 
-## 9. 困ったときの参照先
+## 10. 困ったときの参照先
 
 挙動・設計に迷ったら **推測で書かず**、以下を順に当たる:
 
@@ -126,7 +152,7 @@
    - `xcodebuild-mcp.md` — XcodeBuildMCP / AXe の既知の癖
 4. **Apple 公式ドキュメント**: `mcp__cupertino__search` / `mcp__cupertino__read_document` / `mcp__cupertino__search_concurrency` / `mcp__cupertino__search_symbols`。Swift Concurrency・SwiftUI Observation・NavigationStack・URLSession などフレームワーク挙動の細部はここで一次ソースを取る。
 
-## 10. やってはいけないこと（チェックリスト）
+## 11. やってはいけないこと（チェックリスト）
 
 - [ ] `@unchecked Sendable` を使った（SwiftLint で自動検出）
 - [ ] `ObservableObject` / `@Published` を新規に導入した
@@ -143,6 +169,14 @@
 - [ ] `didSet` で副作用（API 呼び出し・Task 生成）を発火した — 明示的メソッドか `.onChange(of:)` を使う（§2）
 - [ ] `EnvironmentKey.defaultValue` に本番で動く Mock を入れた — `#if DEBUG` ガードを付ける（§2）
 - [ ] `URLSession.shared` を本番コードでタイムアウト設定なしに使った — 専用 Configuration を作る（§7.2）
+- [ ] HTTP レスポンスヘッダを消費側で大文字・小文字の両方を試すフォールバックで参照した — クライアント層で正規化する（§7.2）
+- [ ] `print` / `debugPrint` でログを出した — `os.Logger` を使う（§7.3）
+- [ ] 同じ遷移先を表す Route case を複数の Route enum に重複定義した — 1 つの Route enum にまとめる（§3）
+- [ ] `.navigationDestination(for:)` を複数の View にコピペした — ViewModifier に抽出する（§3）
+- [ ] 同じ UI パターン（avatar、エラー表示等）を複数の View にコピペした — `Common/` に切り出す（§8.1）
+- [ ] ページサイズ等のマジックナンバーを複数ファイルに散らした — 定数型にまとめる（§8.2）
+- [ ] `DateFormatter` / `ISO8601DateFormatter` を使う箇所ごとに都度生成した — `DateFormatters` のシングルトンを使う（§8.2）
+- [ ] Phase enum に `Sendable` / `Equatable` を付け忘れた、または Model のネスト型にしなかった（§2）
 
 上記のいずれかに該当しそうになったら、コードを書く手を止めて理由を整理する。
 

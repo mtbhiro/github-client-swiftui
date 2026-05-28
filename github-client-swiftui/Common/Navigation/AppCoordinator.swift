@@ -10,8 +10,8 @@ enum RootTab: Hashable {
 @Observable
 final class AppCoordinator {
     var selectedTab: RootTab = .search
-    var searchPath: [SearchRoute] = []
-    var bookmarksPath: [BookmarksRoute] = []
+    var searchPath: [ContentRoute] = []
+    var bookmarksPath: [ContentRoute] = []
     var settingsPath: [SettingsRoute] = []
 
     func popToRoot() {

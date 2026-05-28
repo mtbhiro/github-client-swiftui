@@ -51,13 +51,7 @@ struct IssueDetailView: View {
     private func headerSection(_ issue: GitHubIssueDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                AsyncImage(url: issue.user.avatarUrl) { image in
-                    image.resizable()
-                } placeholder: {
-                    Color(.systemGray5)
-                }
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
+                AvatarImageView(url: issue.user.avatarUrl, size: 40)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(issue.user.login)
@@ -184,13 +178,7 @@ struct IssueDetailView: View {
 
     private func commentRow(_ comment: GitHubIssueComment) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            AsyncImage(url: comment.user.avatarUrl) { image in
-                image.resizable()
-            } placeholder: {
-                Color(.systemGray5)
-            }
-            .frame(width: 32, height: 32)
-            .clipShape(Circle())
+            AvatarImageView(url: comment.user.avatarUrl, size: 32)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -210,21 +198,11 @@ struct IssueDetailView: View {
     }
 
     private func errorView(message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.secondary)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("再試行") {
-                model.retry()
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ErrorStateView(
+            icon: "exclamationmark.triangle",
+            message: message,
+            retryAction: { model.retry() }
+        )
     }
 }
 

@@ -32,12 +32,7 @@ nonisolated enum ApiHost: Sendable {
     }
 
     var defaultHeaders: [String: String] {
-        switch self {
-        case .github:
-            ["Accept": "application/vnd.github.v3+json"]
-        case .custom:
-            ["Accept": "application/vnd.github.v3+json"]
-        }
+        ["Accept": "application/vnd.github.v3+json"]
     }
 }
 

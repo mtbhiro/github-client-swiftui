@@ -36,17 +36,16 @@ nonisolated struct GitHubRepoDetailDTO: Decodable, Sendable {
     }
 
     func toDomain() throws -> GitHubRepoDetail {
-        let formatter = ISO8601DateFormatter()
         guard let ownerHtmlUrl = URL(string: owner.htmlUrl) else {
             throw DTOMappingError.invalidURL(field: "owner.htmlUrl", value: owner.htmlUrl)
         }
         guard let repoHtmlUrl = URL(string: htmlUrl) else {
             throw DTOMappingError.invalidURL(field: "htmlUrl", value: htmlUrl)
         }
-        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+        guard let parsedCreatedAt = DateFormatters.iso8601.date(from: createdAt) else {
             throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
         }
-        guard let parsedUpdatedAt = formatter.date(from: updatedAt) else {
+        guard let parsedUpdatedAt = DateFormatters.iso8601.date(from: updatedAt) else {
             throw DTOMappingError.invalidDate(field: "updatedAt", value: updatedAt)
         }
         return GitHubRepoDetail(

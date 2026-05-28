@@ -30,30 +30,7 @@ struct BookmarkListView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("ブックマーク")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: BookmarksRoute.self) { route in
-                switch route {
-                case let .repositoryDetail(fullName):
-                    RepositoryDetailView(
-                        fullName: fullName,
-                        issueListRoute: BookmarksRoute.issueList(fullName),
-                        repository: repository
-                    )
-                case let .issueList(fullName):
-                    IssueListView(
-                        fullName: fullName,
-                        issueDetailRoute: { number in
-                            BookmarksRoute.issueDetail(fullName, number: number)
-                        },
-                        repository: repository
-                    )
-                case let .issueDetail(fullName, number):
-                    IssueDetailView(
-                        fullName: fullName,
-                        issueNumber: number,
-                        repository: repository
-                    )
-                }
-            }
+            .contentRouteDestination(repository: repository)
         }
     }
 
@@ -76,7 +53,7 @@ struct BookmarkListView: View {
             List {
                 ForEach(repos) { item in
                     if case let .repository(repo) = item {
-                        NavigationLink(value: BookmarksRoute.repositoryDetail(repo.fullName)) {
+                        NavigationLink(value: ContentRoute.repositoryDetail(repo.fullName)) {
                             HStack {
                                 repositoryRow(repo)
                                 Spacer()
@@ -148,7 +125,7 @@ struct BookmarkListView: View {
 
         return Section {
             ForEach(visibleIssues, id: \.number) { issue in
-                NavigationLink(value: BookmarksRoute.issueDetail(
+                NavigationLink(value: ContentRoute.issueDetail(
                     issue.fullName,
                     number: issue.number
                 )) {
@@ -192,7 +169,7 @@ struct BookmarkListView: View {
                 .buttonStyle(.plain)
             }
         } header: {
-            NavigationLink(value: BookmarksRoute.repositoryDetail(group.fullName)) {
+            NavigationLink(value: ContentRoute.repositoryDetail(group.fullName)) {
                 HStack(spacing: 6) {
                     Image(systemName: "book.closed")
                         .font(.caption)

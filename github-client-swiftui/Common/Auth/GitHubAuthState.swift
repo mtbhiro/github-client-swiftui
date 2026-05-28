@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 enum GitHubAuthPhase: Equatable, Sendable {
     case signedOut
@@ -38,6 +39,7 @@ final class GitHubAuthState {
     }
 
     func beginSigningIn() {
+        Logger.auth.info("Auth phase: \(String(describing: self.phase)) → signingIn")
         phase = .signingIn
     }
 
@@ -58,6 +60,7 @@ final class GitHubAuthState {
         self.userIsFromCache = false
         profileCache?.save(user)
         phase = .signedIn
+        Logger.auth.info("Auth phase: → signedIn (token saved)")
         return true
     }
 
@@ -70,10 +73,12 @@ final class GitHubAuthState {
 
     func handle401() {
         guard phase != .signedOut else { return }
+        Logger.auth.error("Received 401 — clearing session")
         clearSession()
     }
 
     func logout() {
+        Logger.auth.info("User-initiated logout")
         clearSession()
     }
 

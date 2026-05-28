@@ -1,23 +1,23 @@
 import Foundation
 import Observation
 
-enum DeviceFlowDeviceCodeError: Equatable, Sendable {
-    case network
-    case config
-}
-
-enum DeviceFlowPhase: Equatable, Sendable {
-    case loadingDeviceCode
-    case polling(GitHubDeviceCode)
-    case errorDeviceCode(DeviceFlowDeviceCodeError)
-    case errorAccessDenied
-    case errorExpired
-}
-
 @Observable
 final class DeviceFlowModel {
 
-    private(set) var phase: DeviceFlowPhase = .loadingDeviceCode
+    enum DeviceCodeError: Sendable, Equatable {
+        case network
+        case config
+    }
+
+    enum Phase: Sendable, Equatable {
+        case loadingDeviceCode
+        case polling(GitHubDeviceCode)
+        case errorDeviceCode(DeviceCodeError)
+        case errorAccessDenied
+        case errorExpired
+    }
+
+    private(set) var phase: Phase = .loadingDeviceCode
 
     var inFlightTask: Task<Void, Never>? { currentTask }
 

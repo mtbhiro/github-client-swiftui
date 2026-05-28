@@ -1,12 +1,6 @@
 import Foundation
 
-enum SearchRoute: Hashable {
-    case repositoryDetail(GitHubRepoFullName)
-    case issueList(GitHubRepoFullName)
-    case issueDetail(GitHubRepoFullName, number: Int)
-}
-
-enum BookmarksRoute: Hashable {
+enum ContentRoute: Hashable {
     case repositoryDetail(GitHubRepoFullName)
     case issueList(GitHubRepoFullName)
     case issueDetail(GitHubRepoFullName, number: Int)

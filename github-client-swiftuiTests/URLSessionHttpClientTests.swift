@@ -82,8 +82,8 @@ struct URLSessionHttpClientTests {
             let _: SampleResponse = try await client.send(request)
         } throws: { error in
             guard case let HttpClientError.httpError(_, _, headers) = error else { return false }
-            return headers["X-RateLimit-Remaining"] == "0"
-                && headers["X-RateLimit-Reset"] == "1700000000"
+            return headers["x-ratelimit-remaining"] == "0"
+                && headers["x-ratelimit-reset"] == "1700000000"
         }
     }
 

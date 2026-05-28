@@ -1,20 +1,17 @@
 import SwiftUI
 
-struct IssueListView<IssueDetailRoute: Hashable>: View {
+struct IssueListView: View {
     @Environment(BookmarkStore.self) private var bookmarkStore
     @State private var model: IssueListModel
-    private let issueDetailRoute: (Int) -> IssueDetailRoute
 
     init(
         fullName: GitHubRepoFullName,
-        issueDetailRoute: @escaping (Int) -> IssueDetailRoute,
         repository: any GithubRepoRepositoryProtocol
     ) {
         _model = State(initialValue: IssueListModel(
             fullName: fullName,
             repository: repository
         ))
-        self.issueDetailRoute = issueDetailRoute
     }
 
     var body: some View {
@@ -51,7 +48,7 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func issueList(_ state: LoadedIssues) -> some View {
+    private func issueList(_ state: IssueListModel.LoadedState) -> some View {
         List {
             ForEach(state.issues) { issue in
                 issueRow(issue)
@@ -78,7 +75,7 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
             isPullRequest: issue.isPullRequest,
             createdAt: Date()
         ))
-        return NavigationLink(value: issueDetailRoute(issue.number)) {
+        return NavigationLink(value: ContentRoute.issueDetail(model.fullName, number: issue.number)) {
             HStack {
                 IssueRow(issue: issue)
                 Spacer()
@@ -90,21 +87,11 @@ struct IssueListView<IssueDetailRoute: Hashable>: View {
     }
 
     private func errorView(message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.secondary)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("再試行") {
-                model.retry()
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ErrorStateView(
+            icon: "exclamationmark.triangle",
+            message: message,
+            retryAction: { model.retry() }
+        )
     }
 }
 
@@ -114,7 +101,6 @@ private let previewFullName = GitHubRepoFullName(ownerLogin: "apple", name: "swi
     NavigationStack {
         IssueListView(
             fullName: previewFullName,
-            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository()
         )
     }
@@ -125,7 +111,6 @@ private let previewFullName = GitHubRepoFullName(ownerLogin: "apple", name: "swi
     NavigationStack {
         IssueListView(
             fullName: previewFullName,
-            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository(issuesResult: .success([]))
         )
     }
@@ -136,7 +121,6 @@ private let previewFullName = GitHubRepoFullName(ownerLogin: "apple", name: "swi
     NavigationStack {
         IssueListView(
             fullName: previewFullName,
-            issueDetailRoute: { SearchRoute.issueDetail(previewFullName, number: $0) },
             repository: MockGithubRepoRepository(
                 issuesResult: .failure(URLError(.notConnectedToInternet))
             )

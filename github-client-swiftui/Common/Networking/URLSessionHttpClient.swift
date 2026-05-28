@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 nonisolated struct URLSessionHttpClient: HttpClient {
     private let session: URLSession
@@ -34,6 +35,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
             if error.code == .cancelled, Task.isCancelled {
                 throw CancellationError()
             }
+            Logger.network.error("Network error: \(error.localizedDescription) (code=\(error.code.rawValue))")
             throw HttpClientError.networkError(error)
         }
 
@@ -44,6 +46,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         let headers = Self.headerMap(from: httpResponse)
 
         guard (200..<300).contains(httpResponse.statusCode) else {
+            Logger.network.error("HTTP \(httpResponse.statusCode) for \(urlRequest.url?.path ?? "unknown", privacy: .public)")
             throw HttpClientError.httpError(
                 statusCode: httpResponse.statusCode,
                 data: data,
@@ -55,6 +58,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
             let value = try decoder.decode(T.self, from: data)
             return HttpResponse(value: value, headers: headers)
         } catch {
+            Logger.network.error("Decode failed for \(T.self) at \(urlRequest.url?.path ?? "unknown", privacy: .public)")
             throw HttpClientError.decodingError
         }
     }
@@ -90,7 +94,7 @@ nonisolated struct URLSessionHttpClient: HttpClient {
         var map: [String: String] = [:]
         for (key, value) in response.allHeaderFields {
             guard let keyString = key as? String, let valueString = value as? String else { continue }
-            map[keyString] = valueString
+            map[keyString.lowercased()] = valueString
         }
         return map
     }

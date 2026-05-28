@@ -16,13 +16,13 @@ final class IssueDetailModel {
     private var loadTask: Task<Void, Never>?
     private var commentsTask: Task<Void, Never>?
 
-    enum Phase {
+    enum Phase: Sendable, Equatable {
         case loading
         case loaded(GitHubIssueDetail)
         case error(String)
     }
 
-    enum CommentsPhase: Equatable {
+    enum CommentsPhase: Sendable, Equatable {
         case idle
         case loading
         case loaded

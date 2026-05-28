@@ -83,30 +83,7 @@ struct RepositorySearchView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("リポジトリ検索")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: SearchRoute.self) { route in
-                switch route {
-                case let .repositoryDetail(fullName):
-                    RepositoryDetailView(
-                        fullName: fullName,
-                        issueListRoute: SearchRoute.issueList(fullName),
-                        repository: repository
-                    )
-                case let .issueList(fullName):
-                    IssueListView(
-                        fullName: fullName,
-                        issueDetailRoute: { number in
-                            SearchRoute.issueDetail(fullName, number: number)
-                        },
-                        repository: repository
-                    )
-                case let .issueDetail(fullName, number):
-                    IssueDetailView(
-                        fullName: fullName,
-                        issueNumber: number,
-                        repository: repository
-                    )
-                }
-            }
+            .contentRouteDestination(repository: repository)
             .onChange(of: model.query) { oldValue, newValue in
                 guard newValue != oldValue else { return }
                 model.onQueryChanged()
@@ -193,7 +170,7 @@ struct RepositorySearchView: View {
     }
 
     private func repositoryList(
-        _ state: RepositorySearchLoadedState,
+        _ state: RepositorySearchModel.LoadedState,
         isPagingLoading: Bool,
         isPagingError: Bool
     ) -> some View {
@@ -247,7 +224,7 @@ struct RepositorySearchView: View {
             language: repo.language,
             createdAt: .distantPast
         ))
-        return NavigationLink(value: SearchRoute.repositoryDetail(repo.fullName)) {
+        return NavigationLink(value: ContentRoute.repositoryDetail(repo.fullName)) {
             HStack {
                 RepositoryRow(repository: repo)
                 Spacer()
@@ -268,52 +245,26 @@ struct RepositorySearchView: View {
     }
 
     private var errorNetworkView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "wifi.exclamationmark")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.secondary)
-            Text("通信に失敗しました")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Button("再試行") { model.retry() }
-                .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ErrorStateView(
+            icon: "wifi.exclamationmark",
+            message: "通信に失敗しました",
+            retryAction: { model.retry() }
+        )
     }
 
     private func errorRateLimitedView(resetDate: Date?) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "clock.badge.exclamationmark")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.secondary)
-            Text("API 利用制限に達しました")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Text("解除予定: \(formattedResetDate(resetDate))")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Button("再試行") { model.retry() }
-                .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ErrorStateView(
+            icon: "clock.badge.exclamationmark",
+            message: "API 利用制限に達しました",
+            detail: "解除予定: \(formattedResetDate(resetDate))",
+            retryAction: { model.retry() }
+        )
     }
 
     private func formattedResetDate(_ date: Date?) -> String {
         guard let date else { return "時刻不明" }
-        return Self.rateLimitResetFormatter.string(from: date)
+        return DateFormatters.rateLimitReset.string(from: date)
     }
-
-    private static let rateLimitResetFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        // PRD §4.3.2: 端末ローカルタイムゾーンで yyyy-MM-dd HH:mm。
-        // 数字フォーマット固定なので en_US_POSIX を使う。
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter
-    }()
 }
 
 #Preview("idle") {

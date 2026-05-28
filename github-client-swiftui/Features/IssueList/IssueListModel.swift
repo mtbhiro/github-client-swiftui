@@ -1,31 +1,32 @@
 import Foundation
 import Observation
 
-struct LoadedIssues: Sendable, Equatable {
-    var issues: [GitHubIssue]
-    var currentPage: Int
-    var hasMorePages: Bool
-    var isLoadingMore: Bool = false
-}
-
-enum IssueListPhase: Sendable, Equatable {
-    case loading
-    case loaded(LoadedIssues)
-    case error(message: String)
-
-    var isLoaded: Bool {
-        if case .loaded = self { return true }
-        return false
-    }
-}
-
 @Observable
 final class IssueListModel {
-    private(set) var phase: IssueListPhase = .loading
+
+    struct LoadedState: Sendable, Equatable {
+        var issues: [GitHubIssue]
+        var currentPage: Int
+        var hasMorePages: Bool
+        var isLoadingMore: Bool = false
+    }
+
+    enum Phase: Sendable, Equatable {
+        case loading
+        case loaded(LoadedState)
+        case error(message: String)
+
+        var isLoaded: Bool {
+            if case .loaded = self { return true }
+            return false
+        }
+    }
+
+    private(set) var phase: Phase = .loading
 
     let fullName: GitHubRepoFullName
 
-    static let perPage = 30
+    static let perPage = PaginationConstants.itemsPerPage
     var inFlightTask: Task<Void, Never>? { currentTask }
     private var currentTask: Task<Void, Never>?
     private let repository: GithubRepoRepositoryProtocol
@@ -57,7 +58,7 @@ final class IssueListModel {
 
         do {
             let results = try await repository.fetchIssues(fullName: fullName, page: 1)
-            phase = .loaded(LoadedIssues(
+            phase = .loaded(LoadedState(
                 issues: results,
                 currentPage: 1,
                 hasMorePages: results.count >= Self.perPage
@@ -81,7 +82,7 @@ final class IssueListModel {
                 guard let self else { return }
                 let results = try await self.repository.fetchIssues(fullName: self.fullName, page: nextPage)
                 guard case let .loaded(state) = self.phase else { return }
-                self.phase = .loaded(LoadedIssues(
+                self.phase = .loaded(LoadedState(
                     issues: state.issues + results,
                     currentPage: nextPage,
                     hasMorePages: results.count >= Self.perPage
@@ -101,7 +102,7 @@ final class IssueListModel {
             do {
                 guard let self else { return }
                 let results = try await self.repository.fetchIssues(fullName: self.fullName, page: 1)
-                self.phase = .loaded(LoadedIssues(
+                self.phase = .loaded(LoadedState(
                     issues: results,
                     currentPage: 1,
                     hasMorePages: results.count >= Self.perPage

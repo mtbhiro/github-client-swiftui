@@ -9,7 +9,7 @@ final class RepositoryDetailModel {
     var inFlightTask: Task<Void, Never>? { loadTask }
     private var loadTask: Task<Void, Never>?
 
-    enum Phase {
+    enum Phase: Sendable, Equatable {
         case loading
         case loaded(GitHubRepoDetail)
         case error(String)

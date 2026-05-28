@@ -1,53 +1,39 @@
 import Foundation
 import Observation
 
-struct RepositorySearchLoadedState: Sendable, Equatable {
-    var repositories: [GitHubRepo]
-    var nextPage: Int
-    var hasMorePages: Bool
-}
+@Observable
+final class RepositorySearchModel {
 
-enum RepositorySearchPhase: Sendable, Equatable {
-    case idle
-    case loading
-    case loaded(RepositorySearchLoadedState)
-    case noResults(query: String)
-    case errorNetwork
-    case errorRateLimited(resetDate: Date?)
-    case pagingLoading(RepositorySearchLoadedState)
-    case pagingError(RepositorySearchLoadedState)
+    struct LoadedState: Sendable, Equatable {
+        var repositories: [GitHubRepo]
+        var nextPage: Int
+        var hasMorePages: Bool
+    }
 
-    /// List ベースで表示する phase からの状態抽出。View で switch case を分岐せず単一 List 上で
-    /// 描画するために使う (スクロール位置維持のため)。
     struct ListPresentation {
-        let state: RepositorySearchLoadedState
+        let state: LoadedState
         let isPagingLoading: Bool
         let isPagingError: Bool
     }
 
-    var listState: ListPresentation? {
-        switch self {
-        case let .loaded(state):
-            return ListPresentation(state: state, isPagingLoading: false, isPagingError: false)
-        case let .pagingLoading(state):
-            return ListPresentation(state: state, isPagingLoading: true, isPagingError: false)
-        case let .pagingError(state):
-            return ListPresentation(state: state, isPagingLoading: false, isPagingError: true)
-        case .idle, .loading, .noResults, .errorNetwork, .errorRateLimited:
-            return nil
-        }
+    enum Phase: Sendable, Equatable {
+        case idle
+        case loading
+        case loaded(LoadedState)
+        case noResults(query: String)
+        case errorNetwork
+        case errorRateLimited(resetDate: Date?)
+        case pagingLoading(LoadedState)
+        case pagingError(LoadedState)
     }
-}
 
-@Observable
-final class RepositorySearchModel {
     var query: String = ""
 
-    private(set) var phase: RepositorySearchPhase = .idle
+    private(set) var phase: Phase = .idle
     private(set) var appliedQualifiers: RepositorySearchQualifiers = .empty
     private(set) var sort: RepositorySearchSort = .default
 
-    static let perPage = 30
+    static let perPage = PaginationConstants.itemsPerPage
     static let maxAccumulated = 1000
 
     var inFlightTask: Task<Void, Never>? { currentTask }
@@ -97,11 +83,6 @@ final class RepositorySearchModel {
         fireSearch(debounce: false)
     }
 
-    /// Pull-to-refresh: 現在の検索条件で page=1 を API から再取得する (PRD AC-6.1)。
-    /// `.refreshable` から呼ばれるため async。
-    /// 取得中は既存の `.loaded` を維持し、`.refreshable` 標準のスピナーだけが表示される。
-    /// 成功時に限って page=1 以降のキャッシュを破棄し、新結果で `.loaded` を差し替える。
-    /// 失敗時は既存リストとキャッシュをそのまま残す。
     func refresh() async {
         guard hasActiveCondition else { return }
         guard case .loaded = phase else { return }
@@ -118,10 +99,7 @@ final class RepositorySearchModel {
             do {
                 guard let self else { return }
                 let result = try await self.repository.searchRepositories(
-                    query: qString,
-                    sort: sortKey,
-                    order: orderKey,
-                    page: 1
+                    query: qString, sort: sortKey, order: orderKey, page: 1
                 )
                 try Task.checkCancellation()
                 self.cache.invalidate(query: qString, sort: snapshotSort)
@@ -131,8 +109,6 @@ final class RepositorySearchModel {
             } catch is CancellationError {
                 return
             } catch {
-                // 失敗時は既存の .loaded（および対応キャッシュ）を維持する。
-                // refresh は明示的なユーザー操作だが、エラーで画面全体を入れ替えると古い結果まで失われるため何もしない。
                 return
             }
         }
@@ -222,14 +198,11 @@ final class RepositorySearchModel {
         let qString = RepositorySearchQueryBuilder.build(keyword: trimmed, qualifiers: appliedQualifiers)
         let cacheKey = makeCacheKey(query: qString, page: 1)
 
-        // PRD AC-1.1: キャッシュ命中時は loading を経由せず同期的に loaded/noResults に直接遷移する。
         if let cached = cache.get(cacheKey) {
             applyInitialResult(cached, query: trimmed)
             return
         }
 
-        // debounce 中も loading 状態にして、前の結果が一瞬残るのを防ぐ。
-        // ユーザー操作直後に常に「クリアされた loading 画面」が見える状態を作る。
         phase = .loading
 
         let sortKey = sort.key.rawValue
@@ -241,10 +214,7 @@ final class RepositorySearchModel {
                 }
                 guard let self else { return }
                 let result = try await self.repository.searchRepositories(
-                    query: qString,
-                    sort: sortKey,
-                    order: orderKey,
-                    page: 1
+                    query: qString, sort: sortKey, order: orderKey, page: 1
                 )
                 try Task.checkCancellation()
                 self.cache.put(cacheKey, value: result)
@@ -274,14 +244,13 @@ final class RepositorySearchModel {
                 repositories: capped.list,
                 nextPage: 2,
                 hasMorePages: Self.shouldKeepPaging(
-                    reachedCap: capped.reachedCap,
-                    lastPageCount: result.repositories.count
+                    reachedCap: capped.reachedCap, lastPageCount: result.repositories.count
                 )
             ))
         }
     }
 
-    private func startPaging(from state: RepositorySearchLoadedState) {
+    private func startPaging(from state: LoadedState) {
         cancelCurrentTask()
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -289,7 +258,6 @@ final class RepositorySearchModel {
         let nextPage = state.nextPage
         let cacheKey = makeCacheKey(query: qString, page: nextPage)
 
-        // PRD AC-3.2: 次ページがキャッシュ命中なら paging-loading を経由せず loaded のまま末尾に追記する。
         if let cached = cache.get(cacheKey) {
             applyPagingResult(cached, base: state, nextPage: nextPage)
             return
@@ -303,10 +271,7 @@ final class RepositorySearchModel {
             do {
                 guard let self else { return }
                 let result = try await self.repository.searchRepositories(
-                    query: qString,
-                    sort: sortKey,
-                    order: orderKey,
-                    page: nextPage
+                    query: qString, sort: sortKey, order: orderKey, page: nextPage
                 )
                 try Task.checkCancellation()
                 self.cache.put(cacheKey, value: result)
@@ -321,24 +286,20 @@ final class RepositorySearchModel {
     }
 
     private func applyPagingResult(
-        _ result: RepositorySearchPageResult,
-        base state: RepositorySearchLoadedState,
-        nextPage: Int
+        _ result: RepositorySearchPageResult, base state: LoadedState, nextPage: Int
     ) {
         let capped = Self.cap(existing: state.repositories, appending: result.repositories)
         phase = .loaded(.init(
             repositories: capped.list,
             nextPage: nextPage + 1,
             hasMorePages: Self.shouldKeepPaging(
-                reachedCap: capped.reachedCap,
-                lastPageCount: result.repositories.count
+                reachedCap: capped.reachedCap, lastPageCount: result.repositories.count
             )
         ))
     }
 
     private static func cap(
-        existing: [GitHubRepo],
-        appending: [GitHubRepo]
+        existing: [GitHubRepo], appending: [GitHubRepo]
     ) -> (list: [GitHubRepo], reachedCap: Bool) {
         let merged = existing + appending
         if merged.count >= maxAccumulated {
@@ -348,8 +309,6 @@ final class RepositorySearchModel {
     }
 
     private static func shouldKeepPaging(reachedCap: Bool, lastPageCount: Int) -> Bool {
-        // 1000 件 cap に達した時点で、それ以上のページング要求は発生させない (AC-4.4)。
-        // それ未満でも、最後のレスポンスが per_page 未満なら次ページは存在しないと判断する。
         !reachedCap && lastPageCount >= perPage
     }
 
@@ -369,6 +328,21 @@ final class RepositorySearchModel {
             conditionStore.save(
                 RepositorySearchConditionSnapshot(qualifiers: appliedQualifiers, sort: sort)
             )
+        }
+    }
+}
+
+extension RepositorySearchModel.Phase {
+    var listState: RepositorySearchModel.ListPresentation? {
+        switch self {
+        case let .loaded(state):
+            RepositorySearchModel.ListPresentation(state: state, isPagingLoading: false, isPagingError: false)
+        case let .pagingLoading(state):
+            RepositorySearchModel.ListPresentation(state: state, isPagingLoading: true, isPagingError: false)
+        case let .pagingError(state):
+            RepositorySearchModel.ListPresentation(state: state, isPagingLoading: false, isPagingError: true)
+        case .idle, .loading, .noResults, .errorNetwork, .errorRateLimited:
+            nil
         }
     }
 }

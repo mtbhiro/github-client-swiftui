@@ -1,15 +1,15 @@
 import Foundation
 import Observation
 
-enum SettingsProfileState: Equatable, Sendable {
-    case hidden
-    case loading
-    case loaded(GitHubAuthenticatedUser)
-    case cached(GitHubAuthenticatedUser)
-}
-
 @Observable
 final class SettingsModel {
+
+    enum Phase: Sendable, Equatable {
+        case hidden
+        case loading
+        case loaded(GitHubAuthenticatedUser)
+        case cached(GitHubAuthenticatedUser)
+    }
     private(set) var logoutConfirmationVisible: Bool = false
 
     var inFlightTask: Task<Void, Never>? { profileTask }
@@ -25,7 +25,7 @@ final class SettingsModel {
         self.service = service
     }
 
-    var profileState: SettingsProfileState {
+    var profilePhase: Phase {
         switch authState.phase {
         case .signedOut, .signingIn:
             return .hidden

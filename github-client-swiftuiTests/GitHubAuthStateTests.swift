@@ -142,26 +142,17 @@ struct RateLimitObserverTests {
     @Test func update_withValidHeaders_setsSnapshot() {
         let observer = RateLimitObserver()
         observer.update(from: [
-            "X-RateLimit-Limit": "5000",
-            "X-RateLimit-Remaining": "4999",
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4999",
         ])
         #expect(observer.snapshot == RateLimitSnapshot(limit: 5000, remaining: 4999))
-    }
-
-    @Test func update_withLowercaseHeaders_setsSnapshot() {
-        let observer = RateLimitObserver()
-        observer.update(from: [
-            "x-ratelimit-limit": "60",
-            "x-ratelimit-remaining": "59",
-        ])
-        #expect(observer.snapshot == RateLimitSnapshot(limit: 60, remaining: 59))
     }
 
     @Test func update_missingHeaders_doesNotOverwrite() {
         let observer = RateLimitObserver()
         observer.update(from: [
-            "X-RateLimit-Limit": "60",
-            "X-RateLimit-Remaining": "59",
+            "x-ratelimit-limit": "60",
+            "x-ratelimit-remaining": "59",
         ])
         observer.update(from: [:])
         #expect(observer.snapshot == RateLimitSnapshot(limit: 60, remaining: 59))
@@ -170,8 +161,8 @@ struct RateLimitObserverTests {
     @Test func reset_clearsSnapshot() {
         let observer = RateLimitObserver()
         observer.update(from: [
-            "X-RateLimit-Limit": "60",
-            "X-RateLimit-Remaining": "10",
+            "x-ratelimit-limit": "60",
+            "x-ratelimit-remaining": "10",
         ])
         observer.reset()
         #expect(observer.snapshot == nil)

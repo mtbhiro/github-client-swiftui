@@ -32,35 +32,8 @@ struct RepositoryRow: View {
         .padding(.vertical, 4)
     }
 
-    @ViewBuilder
     private var avatar: some View {
-        if let url = repository.owner.avatarUrl {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .empty:
-                    ProgressView()
-                case .failure:
-                    Image(systemName: "person.crop.circle.fill")
-                        .resizable()
-                        .foregroundStyle(.tertiary)
-                @unknown default:
-                    Color.clear
-                }
-            }
-            .frame(width: 40, height: 40)
-            .clipShape(Circle())
-            .accessibilityHidden(true)
-        } else {
-            Image(systemName: "person.crop.circle.fill")
-                .resizable()
-                .frame(width: 40, height: 40)
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-        }
+        AvatarImageView(url: repository.owner.avatarUrl, size: 40)
     }
 }
 

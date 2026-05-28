@@ -24,8 +24,7 @@ nonisolated struct GitHubIssueDTO: Decodable, Sendable {
     }
 
     func toDomain() throws -> GitHubIssue {
-        let formatter = ISO8601DateFormatter()
-        guard let parsedCreatedAt = formatter.date(from: createdAt) else {
+        guard let parsedCreatedAt = DateFormatters.iso8601.date(from: createdAt) else {
             throw DTOMappingError.invalidDate(field: "createdAt", value: createdAt)
         }
         return GitHubIssue(

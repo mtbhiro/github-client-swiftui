@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// リポジトリ検索結果の短期メモリキャッシュ (PRD: repository-search-cache.md §5)。
 /// 同期参照前提 (AC-1.1) のため、View Model と同じ MainActor 上で動く UI 状態の付属物として扱う。
@@ -18,7 +19,11 @@ final class RepositorySearchCache {
     private var accessOrder: [Key] = []
 
     func get(_ key: Key) -> RepositorySearchPageResult? {
-        guard let value = entries[key] else { return nil }
+        guard let value = entries[key] else {
+            Logger.cache.debug("Cache miss: page=\(key.page)")
+            return nil
+        }
+        Logger.cache.debug("Cache hit: page=\(key.page)")
         touch(key)
         return value
     }
@@ -47,6 +52,7 @@ final class RepositorySearchCache {
 
     private func evictIfNeeded() {
         while entries.count > Self.capacity, let oldest = accessOrder.first {
+            Logger.cache.debug("LRU evict: page=\(oldest.page)")
             entries.removeValue(forKey: oldest)
             accessOrder.removeFirst()
         }

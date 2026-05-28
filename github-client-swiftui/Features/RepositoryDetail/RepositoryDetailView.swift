@@ -1,19 +1,18 @@
 import SwiftUI
 
-struct RepositoryDetailView<IssueListRoute: Hashable>: View {
+struct RepositoryDetailView: View {
     @State private var model: RepositoryDetailModel
-    private let issueListRoute: IssueListRoute
+    private let fullName: GitHubRepoFullName
 
     init(
         fullName: GitHubRepoFullName,
-        issueListRoute: IssueListRoute,
         repository: any GithubRepoRepositoryProtocol
     ) {
+        self.fullName = fullName
         _model = State(initialValue: RepositoryDetailModel(
             fullName: fullName,
             repository: repository
         ))
-        self.issueListRoute = issueListRoute
     }
 
     var body: some View {
@@ -50,13 +49,7 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
     private func headerSection(_ repo: GitHubRepoDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                AsyncImage(url: repo.owner.avatarUrl) { image in
-                    image.resizable()
-                } placeholder: {
-                    Color(.systemGray5)
-                }
-                .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                AvatarImageView(url: repo.owner.avatarUrl, size: 48, shape: .roundedRect(cornerRadius: 8))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(repo.owner.login)
@@ -174,7 +167,7 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
     }
 
     private func issueRow(repo: GitHubRepoDetail) -> some View {
-        NavigationLink(value: issueListRoute) {
+        NavigationLink(value: ContentRoute.issueList(fullName)) {
             HStack(spacing: 12) {
                 Image(systemName: "exclamationmark.circle")
                     .foregroundStyle(.secondary)
@@ -193,21 +186,11 @@ struct RepositoryDetailView<IssueListRoute: Hashable>: View {
     }
 
     private func errorView(message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.secondary)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("再試行") {
-                model.retry()
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ErrorStateView(
+            icon: "exclamationmark.triangle",
+            message: message,
+            retryAction: { model.retry() }
+        )
     }
 }
 
@@ -229,7 +212,6 @@ private extension RepositoryDetailModel.Phase {
     NavigationStack {
         RepositoryDetailView(
             fullName: fullName,
-            issueListRoute: SearchRoute.issueList(fullName),
             repository: MockGithubRepoRepository()
         )
     }
@@ -240,7 +222,6 @@ private extension RepositoryDetailModel.Phase {
     NavigationStack {
         RepositoryDetailView(
             fullName: fullName,
-            issueListRoute: SearchRoute.issueList(fullName),
             repository: MockGithubRepoRepository(
                 fetchResult: .failure(URLError(.notConnectedToInternet))
             )

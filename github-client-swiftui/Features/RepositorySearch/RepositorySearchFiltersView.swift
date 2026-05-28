@@ -1,22 +1,13 @@
 import SwiftUI
 
-private let isoDateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = .current
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter
-}()
-
 struct RepositorySearchFiltersView: View {
 
     static func parseISODate(_ value: String) -> Date? {
-        isoDateFormatter.date(from: value)
+        DateFormatters.isoDate.date(from: value)
     }
 
     static func formatISODate(_ date: Date) -> String {
-        isoDateFormatter.string(from: date)
+        DateFormatters.isoDate.string(from: date)
     }
 
     @Environment(\.dismiss) private var dismiss

@@ -108,7 +108,7 @@ struct DeviceFlowView: View {
         }
     }
 
-    private func errorDeviceCodeView(_ reason: DeviceFlowDeviceCodeError) -> some View {
+    private func errorDeviceCodeView(_ reason: DeviceFlowModel.DeviceCodeError) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
@@ -164,7 +164,7 @@ struct DeviceFlowView: View {
         coordinator.popToRoot(of: .settings)
     }
 
-    private func message(for reason: DeviceFlowDeviceCodeError) -> String {
+    private func message(for reason: DeviceFlowModel.DeviceCodeError) -> String {
         switch reason {
         case .network:
             return "通信に失敗しました。電波状況をご確認のうえ再試行してください。"
