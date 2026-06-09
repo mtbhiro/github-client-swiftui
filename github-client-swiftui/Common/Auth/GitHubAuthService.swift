@@ -25,7 +25,7 @@ nonisolated struct GitHubAuthHosts: Sendable {
     )
 }
 
-actor GitHubAuthService: GitHubAuthServiceProtocol {
+nonisolated struct GitHubAuthService: GitHubAuthServiceProtocol {
     private let httpClient: HttpClient
     private let keychain: KeychainStorage
     private let hosts: GitHubAuthHosts
@@ -95,19 +95,19 @@ actor GitHubAuthService: GitHubAuthServiceProtocol {
         return dto.toDomain()
     }
 
-    nonisolated func saveToken(_ token: String) throws {
+    func saveToken(_ token: String) throws {
         try keychain.save(token)
     }
 
-    nonisolated func loadToken() -> String? {
+    func loadToken() -> String? {
         keychain.load()
     }
 
-    nonisolated func clearToken() throws {
+    func clearToken() throws {
         try keychain.delete()
     }
 
-    nonisolated func clientID() throws -> String {
+    func clientID() throws -> String {
         guard let id = clientIDProvider(), !id.isEmpty else {
             throw GitHubAuthConfigError.missingClientID
         }

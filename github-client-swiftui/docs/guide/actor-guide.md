@@ -51,13 +51,18 @@ let v = await c.current()
    └─ UI 関連の状態か？
       ├─ Yes → @MainActor class（プロジェクト規約）
       └─ No
-         └─ 複数 Task から同時に触る可能性があるか？
-            ├─ No → nonisolated final class（全プロパティ let）か struct
+         └─ 可変状態 (var) を持つか？
+            ├─ No（全プロパティ let） → struct で十分（自動で Sendable）
             └─ Yes
-               └─ actor を使う ★
+               └─ 複数 Task から同時に触る可能性があるか？
+                  ├─ No → nonisolated final class か struct
+                  └─ Yes
+                     └─ actor を使う ★
 ```
 
-「複数 Task から同時に触る可能性があるか」が要。**そもそも 1 つの Task からしか触らないなら、actor のコストを払う意味はない**。
+actor が解決するのは **可変状態への同時アクセス（データ競合）** 。全プロパティが `let` なら複数 Task から同時に読んでも競合しないので、actor の保護は不要。`struct` にすれば値型として自動で `Sendable` を満たし、executor hop のコストもかからない。
+
+`GitHubAuthService` は以前 `actor` だったが、全プロパティが `let` で可変状態を持たなかったため `nonisolated struct` に変更した。
 
 ### actor が向いている典型例
 
