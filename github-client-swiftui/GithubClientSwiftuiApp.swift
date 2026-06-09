@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct github_client_swiftuiApp: App {
+struct GithubClientSwiftuiApp: App {
     @State private var bookmarkStore = BookmarkStore()
     @State private var coordinator = AppCoordinator()
     @State private var authStack: AuthStack
