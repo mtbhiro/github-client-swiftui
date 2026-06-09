@@ -138,7 +138,71 @@ struct AuthenticatedHttpClientTests {
 
     // MARK: - レート制限ヘッダ観測
 
-    @Test func successResponse_updatesRateLimitObserver() async throws {
+    @Test func successResponse_updatesRateLimitObserver_coreResource() async throws {
+        let sut = makeSUT(initialToken: "tok")
+        // swiftlint:disable:next force_unwrapping
+        let body = #"{"id":1}"#.data(using: .utf8)!
+        sut.stub.respond(data: body, statusCode: 200, headers: [
+            "X-RateLimit-Limit": "5000",
+            "X-RateLimit-Remaining": "4999",
+            "X-RateLimit-Resource": "core",
+        ])
+        let request = HttpRequest(host: sut.stub.apiHost, path: "/user")
+
+        let _: SampleResponse = try await sut.client.send(request)
+
+        #expect(sut.rateLimit.snapshots[.core] == RateLimitSnapshot(limit: 5000, remaining: 4999))
+    }
+
+    @Test func successResponse_updatesRateLimitObserver_searchResource() async throws {
+        let sut = makeSUT(initialToken: "tok")
+        // swiftlint:disable:next force_unwrapping
+        let body = #"{"id":1}"#.data(using: .utf8)!
+        sut.stub.respond(data: body, statusCode: 200, headers: [
+            "X-RateLimit-Limit": "30",
+            "X-RateLimit-Remaining": "29",
+            "X-RateLimit-Resource": "search",
+        ])
+        let request = HttpRequest(host: sut.stub.apiHost, path: "/search/repositories")
+
+        let _: SampleResponse = try await sut.client.send(request)
+
+        #expect(sut.rateLimit.snapshots[.search] == RateLimitSnapshot(limit: 30, remaining: 29))
+    }
+
+    @Test func failureResponse_alsoUpdatesRateLimit() async {
+        let sut = makeSUT(initialToken: "tok")
+        sut.stub.respond(data: Data(), statusCode: 403, headers: [
+            "X-RateLimit-Limit": "60",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Resource": "core",
+        ])
+        let request = HttpRequest(host: sut.stub.apiHost, path: "/user")
+
+        await #expect {
+            let _: SampleResponse = try await sut.client.send(request)
+        } throws: { _ in true }
+
+        #expect(sut.rateLimit.snapshots[.core] == RateLimitSnapshot(limit: 60, remaining: 0))
+    }
+
+    @Test func nonGitHubHost_doesNotUpdateRateLimit() async throws {
+        let sut = makeSUT()
+        let nonGitHub = makeNonGitHubStub()
+        // swiftlint:disable:next force_unwrapping
+        let body = #"{"id":1}"#.data(using: .utf8)!
+        nonGitHub.respond(data: body, statusCode: 200, headers: [
+            "X-RateLimit-Limit": "5000",
+            "X-RateLimit-Remaining": "4999",
+            "X-RateLimit-Resource": "core",
+        ])
+        let request = HttpRequest(host: nonGitHub.apiHost, path: "/echo")
+        let _: SampleResponse = try await sut.client.send(request)
+
+        #expect(sut.rateLimit.snapshots.isEmpty)
+    }
+
+    @Test func missingResourceHeader_defaultsToCore() async throws {
         let sut = makeSUT(initialToken: "tok")
         // swiftlint:disable:next force_unwrapping
         let body = #"{"id":1}"#.data(using: .utf8)!
@@ -150,36 +214,6 @@ struct AuthenticatedHttpClientTests {
 
         let _: SampleResponse = try await sut.client.send(request)
 
-        #expect(sut.rateLimit.snapshot == RateLimitSnapshot(limit: 5000, remaining: 4999))
-    }
-
-    @Test func failureResponse_alsoUpdatesRateLimit() async {
-        let sut = makeSUT(initialToken: "tok")
-        sut.stub.respond(data: Data(), statusCode: 403, headers: [
-            "X-RateLimit-Limit": "60",
-            "X-RateLimit-Remaining": "0",
-        ])
-        let request = HttpRequest(host: sut.stub.apiHost, path: "/user")
-
-        await #expect {
-            let _: SampleResponse = try await sut.client.send(request)
-        } throws: { _ in true }
-
-        #expect(sut.rateLimit.snapshot == RateLimitSnapshot(limit: 60, remaining: 0))
-    }
-
-    @Test func nonGitHubHost_doesNotUpdateRateLimit() async throws {
-        let sut = makeSUT()
-        let nonGitHub = makeNonGitHubStub()
-        // swiftlint:disable:next force_unwrapping
-        let body = #"{"id":1}"#.data(using: .utf8)!
-        nonGitHub.respond(data: body, statusCode: 200, headers: [
-            "X-RateLimit-Limit": "5000",
-            "X-RateLimit-Remaining": "4999",
-        ])
-        let request = HttpRequest(host: nonGitHub.apiHost, path: "/echo")
-        let _: SampleResponse = try await sut.client.send(request)
-
-        #expect(sut.rateLimit.snapshot == nil)
+        #expect(sut.rateLimit.snapshots[.core] == RateLimitSnapshot(limit: 5000, remaining: 4999))
     }
 }

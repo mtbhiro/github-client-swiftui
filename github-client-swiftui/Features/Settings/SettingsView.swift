@@ -49,7 +49,7 @@ struct SettingsView: View {
                     authSection(model: model)
                 }
                 Section("レート制限") {
-                    rateLimitRow
+                    rateLimitRows
                 }
             }
             .confirmationDialog(
@@ -143,24 +143,24 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var rateLimitRow: some View {
-        if let snapshot = rateLimit.snapshot {
-            HStack {
-                Text("上限")
-                Spacer()
+    private var rateLimitRows: some View {
+        rateLimitRow(label: "Core API", resource: .core, identifier: "settings.rateLimit.core")
+        rateLimitRow(label: "Search API", resource: .search, identifier: "settings.rateLimit.search")
+    }
+
+    private func rateLimitRow(label: String, resource: RateLimitResource, identifier: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            if let snapshot = rateLimit.snapshots[resource] {
                 Text("\(snapshot.remaining) / \(snapshot.limit)")
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-            }
-            .accessibilityIdentifier("settings.rateLimit")
-        } else {
-            HStack {
-                Text("上限")
-                Spacer()
+            } else {
                 Text("未取得")
                     .foregroundStyle(.secondary)
             }
-            .accessibilityIdentifier("settings.rateLimit")
         }
+        .accessibilityIdentifier(identifier)
     }
 }

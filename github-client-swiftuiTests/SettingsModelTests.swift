@@ -127,13 +127,14 @@ struct SettingsModelTests {
         sut.rateLimit.update(from: [
             "x-ratelimit-limit": "5000",
             "x-ratelimit-remaining": "4999",
+            "x-ratelimit-resource": "core",
         ])
         sut.model.requestLogout()
         sut.model.confirmLogout()
 
         #expect(sut.model.logoutConfirmationVisible == false)
         #expect(sut.authState.phase == .signedOut)
-        #expect(sut.rateLimit.snapshot == nil)
+        #expect(sut.rateLimit.snapshots.isEmpty)
     }
 
     @Test func cancelLogout_keepsState() {
@@ -156,8 +157,9 @@ struct SettingsModelTests {
         sut.rateLimit.update(from: [
             "x-ratelimit-limit": "60",
             "x-ratelimit-remaining": "30",
+            "x-ratelimit-resource": "core",
         ])
         sut.model.onAuthPhaseChanged()
-        #expect(sut.rateLimit.snapshot == nil)
+        #expect(sut.rateLimit.snapshots.isEmpty)
     }
 }

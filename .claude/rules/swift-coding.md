@@ -34,7 +34,8 @@
 ### 1.3 Sendable
 
 - actor 境界・Task 境界をまたぐ型は `Sendable` を意識して設計する。
-- 適合に迷ったら `docs/guide/sendable-guide.md`。
+- `enum`・`struct` は条件を満たせばコンパイラが暗黙的に `Sendable` を推論する。冗長な `: Sendable` は付けない。`final class` と `protocol` は明示が必要。
+- 適合に迷ったら `docs/guide/sendable-guide.md` の「暗黙適合の判断フロー」を参照。
 
 ### 1.4 Task キャンセル
 
