@@ -25,7 +25,6 @@ struct GithubClientSwiftuiApp: App {
 }
 
 /// 起動時に 1 回だけ作る Auth 関連オブジェクトの束。
-@MainActor
 struct AuthStack {
     let authState: GitHubAuthState
     let rateLimit: RateLimitObserver
