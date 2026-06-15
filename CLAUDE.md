@@ -19,7 +19,17 @@
 
 # Swift / SwiftUI コードを書くときのルール
 
-Swift / SwiftUI コード（プロダクトコード・テストコード）の編集に着手する前に **必ず `.claude/rules/swift-coding.md` を読む**。本書の前提と整合する形で、状態モデル・非同期/キャンセル戦略・テストファースト運用・困ったときの参照先（`docs/guide/` / `docs/pitfalls/` / `mcp__cupertino__*`）などを集約している。
+Swift / SwiftUI コード（プロダクトコード・テストコード）の編集に着手する前に **必ず `.claude/rules/swift-coding.md` を読む**。本書の前提と整合する形で、状態モデル・非同期/キャンセル戦略・テストファースト運用・困ったときの参照先などを集約している。
+
+## Apple 公式 Agent Skills
+
+SwiftUI のベストプラクティスは Apple 公式 Agent Skills（Xcode 27 同梱）を一次ソースとする。以下の 3 Skills を `.claude/skills/` に導入済み:
+
+- **`/swiftui-specialist`** — SwiftUI の View 構造・データフロー・Environment・modifier・ForEach・localization・animation・soft-deprecated API
+- **`/swiftui-whats-new-27`** — SDK 27 の新 API（`@State` マクロ化・`AsyncImage` キャッシュ・reorderable・swipe actions・toolbar overflow 等）
+- **`/test-modernizer`** — XCTest → Swift Testing 移行ガイダンス
+
+SwiftUI API の使い方に迷ったらまず公式 Skills を参照する。`.claude/rules/swift-coding.md` はプロジェクト固有のルール（並行性・アーキテクチャ層・ナビゲーション・テスト運用・flaky 防止等）に集中している。
 
 # Xcode プロジェクト構成
 

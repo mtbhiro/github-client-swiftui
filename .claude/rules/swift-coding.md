@@ -5,6 +5,16 @@
 
 > 前提となるプロジェクト規約（対応 OS・採用フレームワーク・状態管理方針など）は **ルート `CLAUDE.md`** と **`github-client-swiftui/docs/requirements.md`** を参照する。本書は「コードを書く・編集する瞬間」に効くルールに絞る。
 
+## Apple 公式 Skills との関係
+
+SwiftUI のベストプラクティス・イディオマティックパターンは **Apple 公式 Agent Skills** を一次ソースとする。
+
+- **`/swiftui-specialist`** — SwiftUI の View 構造、データフロー、Environment、modifier、ForEach、localization、animation、soft-deprecated API のガイダンス。**SwiftUI コードを書く・レビューする際に参照する**。
+- **`/swiftui-whats-new-27`** — SDK 27 の新 API（`@State` マクロ化、`AsyncImage` キャッシュ、reorderable、swipe actions、toolbar overflow 等）。**SDK 27 の API を使う・SDK アップデート後のコンパイルエラーに対応する際に参照する**。
+- **`/test-modernizer`** — XCTest → Swift Testing への移行ガイダンス。**既存テストを Swift Testing に移行する際に参照する**。
+
+本書は上記 Skills でカバーされない **プロジェクト固有のルール** に集中する。公式 Skills と本書の内容が矛盾する場合は、§1（並行性）・§2（状態管理のプロジェクト固有パターン）・§3（ナビゲーション）・§6（テスト運用）は本書を優先し、SwiftUI API のベストプラクティス（View 構造・データフロー・modifier・ForEach・localization 等）は公式 Skills を優先する。
+
 ## 1. 並行性 (Concurrency)
 
 ### 1.1 基本方針
@@ -43,9 +53,10 @@
 - **`CancellationError` はユーザー向けエラーとして表示しない**（黙って捨てる）。
 - 詳細は `docs/guide/task-cancellation-guide.md`。
 
-## 2. 状態管理・アーキテクチャ
+## 2. 状態管理・アーキテクチャ（プロジェクト固有）
 
-- 状態管理は **SwiftUI Observation の `@Observable`** を使う。`ObservableObject` / `@Published` は採用しない。
+> `@Observable` の per-property tracking・`@State` の使い方・`@Binding` の設計・`@Entry` マクロなど SwiftUI のデータフロー全般は `/swiftui-specialist` の `references/dataflow.md` / `references/environment.md` を参照する。本節はプロジェクト固有の規約に限定する。
+
 - 層は **View / Observable Model / Repository / API Client** の 4 層を基本にする。それぞれの責務を混ぜない。
 - 状態は **`enum` で表現可能なら enum** を優先する（`idle / loading / loaded(...) / empty / error(...)` 等）。複数の `Bool` フラグで状態を表現しない。
 - **Phase enum の一貫性**: Model が持つ Phase enum は **Model のネスト型**として定義する（例: `RepositorySearchModel.Phase`）。関連する値型（`LoadedState` 等）も同様にネストする。Phase には **`Sendable, Equatable`** を付ける。
@@ -53,7 +64,9 @@
 - **`didSet` で副作用（API 呼び出し・Task 生成など）を発火しない**。`didSet` 副作用 + 抑制フラグ（`suppressXxx`）のパターンは状態遷移が暗黙的になり壊れやすい。プロパティは値の保持に徹し、副作用は明示的なメソッド呼び出しか View の `.onChange(of:)` で発火する。
 - **DI の `EnvironmentKey.defaultValue` に Mock を入れない**。注入漏れが本番で黙って Mock 動作になりバグを隠蔽する。`#if DEBUG` で Mock / Release で `fatalError` にするか、Protocol に対して明示的に注入を必須にする。
 
-## 3. ナビゲーション
+## 3. ナビゲーション（プロジェクト固有）
+
+> ナビゲーション全般のベストプラクティスは `/swiftui-specialist` を参照する。本節はこのプロジェクト固有のパターンに限定する。
 
 - ナビゲーションは **`NavigationStack` のデータ駆動** を基本にする。`NavigationView` は使わない。
 - `NavigationLink(value:)` と `.navigationDestination(for:)` を使う。
@@ -76,6 +89,8 @@
 - avatar 画像のロード失敗は **画面全体の error 状態にしない**（要求定義 §3.5）。
 
 ## 6. テスト（Swift Testing）
+
+> XCTest → Swift Testing の移行パターン（assertion マッピング・setUp/tearDown 変換・`confirmation()` 等）は `/test-modernizer` を参照する。本節はプロジェクト固有のテスト運用・flaky 防止ルールに限定する。
 
 - テストは **Swift Testing** を主に使う（`@Test` / `#expect` / `#require`）。`XCTest` は新規には書かない。
 - **TDD を基本にする**。Observable Model / Repository / Mapper / 純粋ロジックは **テストファースト**（Red → Green → Refactor）。
@@ -140,18 +155,19 @@
 
 挙動・設計に迷ったら **推測で書かず**、以下を順に当たる:
 
-1. **プロジェクト規約**: ルート `CLAUDE.md`、`github-client-swiftui/docs/requirements.md`、機能別 PRD（`docs/requirements/<slug>.md`）。
-2. **ガイド**: `github-client-swiftui/docs/guide/`
+1. **Apple 公式 Agent Skills**: `/swiftui-specialist`（SwiftUI ベストプラクティス）、`/swiftui-whats-new-27`（SDK 27 新 API）、`/test-modernizer`（テスト移行）。SwiftUI の API 使い方・パターンはまずここを参照する。
+2. **プロジェクト規約**: ルート `CLAUDE.md`、`github-client-swiftui/docs/requirements.md`、機能別 PRD（`docs/requirements/<slug>.md`）。
+3. **ガイド**: `github-client-swiftui/docs/guide/`
    - `actor-isolation-guide.md` — `@MainActor` / `nonisolated` の取り回し
    - `actor-guide.md` — 独自 `actor` 型をいつ・なぜ使うか／メリット・デメリット・reentrancy
    - `sendable-guide.md` — `Sendable` の付け方・避け方
    - `task-cancellation-guide.md` — Task キャンセルの伝搬・協調キャンセル
    - `navigation-guide.md` — `NavigationStack` data-driven の組み立て
    - `testing-design-guide.md` — テスタブルな設計・フレーキー防止・Mock 設計・非同期テストパターン
-3. **落とし穴**: `github-client-swiftui/docs/pitfalls/README.md` を索引にして該当ファイル。
+4. **落とし穴**: `github-client-swiftui/docs/pitfalls/README.md` を索引にして該当ファイル。
    - `testing.md` — Swift Testing 並列実行と stub race
    - `xcodebuild-mcp.md` — XcodeBuildMCP / AXe の既知の癖
-4. **Apple 公式ドキュメント**: `mcp__cupertino__search` / `mcp__cupertino__read_document` / `mcp__cupertino__search_concurrency` / `mcp__cupertino__search_symbols`。Swift Concurrency・SwiftUI Observation・NavigationStack・URLSession などフレームワーク挙動の細部はここで一次ソースを取る。
+5. **Apple 公式ドキュメント**: `mcp__cupertino__search` / `mcp__cupertino__read_document` / `mcp__cupertino__search_concurrency` / `mcp__cupertino__search_symbols`。Swift Concurrency・SwiftUI Observation・NavigationStack・URLSession などフレームワーク挙動の細部はここで一次ソースを取る。
 
 ## 11. やってはいけないこと（チェックリスト）
 
@@ -178,6 +194,7 @@
 - [ ] ページサイズ等のマジックナンバーを複数ファイルに散らした — 定数型にまとめる（§8.2）
 - [ ] `DateFormatter` / `ISO8601DateFormatter` を使う箇所ごとに都度生成した — `DateFormatters` のシングルトンを使う（§8.2）
 - [ ] Phase enum に `Sendable` / `Equatable` を付け忘れた、または Model のネスト型にしなかった（§2）
+- [ ] soft-deprecated API を新規に使った — `/swiftui-specialist` の `references/soft-deprecated-apis.md` で確認する
 
 上記のいずれかに該当しそうになったら、コードを書く手を止めて理由を整理する。
 
