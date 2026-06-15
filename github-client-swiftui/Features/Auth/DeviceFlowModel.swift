@@ -23,19 +23,22 @@ final class DeviceFlowModel {
 
     private var currentTask: Task<Void, Never>?
     private let service: GitHubAuthServiceProtocol
+    private let authState: GitHubAuthState
+    private let coordinator: AppCoordinator
     /// テスト時に polling interval を圧縮するための係数。
     /// `interval` 秒 * `intervalScale` の `Duration` を `Task.sleep` に渡す。
     private let intervalScale: Double
-    private let onSignInSuccess: @MainActor @Sendable (String, GitHubAuthenticatedUser) -> Void
 
     init(
         service: GitHubAuthServiceProtocol,
-        intervalScale: Double = 1.0,
-        onSignInSuccess: @MainActor @Sendable @escaping (String, GitHubAuthenticatedUser) -> Void
+        authState: GitHubAuthState,
+        coordinator: AppCoordinator,
+        intervalScale: Double = 1.0
     ) {
         self.service = service
+        self.authState = authState
+        self.coordinator = coordinator
         self.intervalScale = intervalScale
-        self.onSignInSuccess = onSignInSuccess
     }
 
     func start() {
@@ -131,7 +134,8 @@ final class DeviceFlowModel {
     private func handleSuccess(token: String) async {
         do {
             let user = try await service.fetchAuthenticatedUser(token: token)
-            onSignInSuccess(token, user)
+            authState.completeSignIn(token: token, user: user)
+            coordinator.popToRoot(of: .settings)
         } catch is CancellationError {
             return
         } catch {

@@ -13,8 +13,9 @@ final class AuthFactory {
     }
 
     func makeDeviceFlowModel(
-        onSignInSuccess: @MainActor @Sendable @escaping (String, GitHubAuthenticatedUser) -> Void
+        authState: GitHubAuthState,
+        coordinator: AppCoordinator
     ) -> DeviceFlowModel {
-        DeviceFlowModel(service: service, onSignInSuccess: onSignInSuccess)
+        DeviceFlowModel(service: service, authState: authState, coordinator: coordinator)
     }
 }

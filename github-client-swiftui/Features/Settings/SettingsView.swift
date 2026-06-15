@@ -16,10 +16,12 @@ struct SettingsView: View {
                 .navigationDestination(for: SettingsRoute.self) { route in
                     switch route {
                     case .deviceFlow:
-                        DeviceFlowView(model: authFactory.makeDeviceFlowModel { token, user in
-                            authState.completeSignIn(token: token, user: user)
-                            coordinator.popToRoot(of: .settings)
-                        })
+                        DeviceFlowView(
+                            model: authFactory.makeDeviceFlowModel(
+                                authState: authState,
+                                coordinator: coordinator
+                            )
+                        )
                     }
                 }
         }
