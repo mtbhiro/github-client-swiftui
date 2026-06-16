@@ -6,79 +6,51 @@ struct SettingsView: View {
     @Environment(RateLimitObserver.self) private var rateLimit
     @Environment(AuthFactory.self) private var authFactory
 
-    @State private var model: SettingsModel?
+    @State private var logoutConfirmationVisible = false
 
     var body: some View {
         @Bindable var coordinator = coordinator
         NavigationStack(path: $coordinator.settingsPath) {
-            settingsForm
-                .navigationTitle("設定")
-                .navigationDestination(for: SettingsRoute.self) { route in
-                    switch route {
-                    case .deviceFlow:
-                        DeviceFlowView(
-                            model: authFactory.makeDeviceFlowModel(
-                                authState: authState,
-                                coordinator: coordinator
-                            )
-                        )
-                    }
-                }
-        }
-        .task {
-            if model == nil {
-                model = SettingsModel(
-                    authState: authState,
-                    rateLimit: rateLimit,
-                    service: authFactory.service
-                )
-            }
-            model?.refreshProfile()
-        }
-        .onChange(of: authState.phase) { _, _ in
-            model?.onAuthPhaseChanged()
-            // 起動時の signedIn 復元、または Device Flow 経由で sign-in した直後にも
-            // refreshProfile を流すと、cached → loaded への遷移ができる。
-            model?.refreshProfile()
-        }
-    }
-
-    @ViewBuilder
-    private var settingsForm: some View {
-        if let model {
             Form {
                 Section("アカウント") {
-                    authSection(model: model)
+                    authSection
                 }
                 Section("レート制限") {
                     rateLimitRows
                 }
             }
+            .navigationTitle("設定")
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .deviceFlow:
+                    DeviceFlowView(
+                        model: authFactory.makeDeviceFlowModel(
+                            authState: authState,
+                            coordinator: coordinator
+                        )
+                    )
+                }
+            }
             .confirmationDialog(
                 "ログアウトしますか？",
-                isPresented: Binding(
-                    get: { model.logoutConfirmationVisible },
-                    set: { newValue in
-                        if !newValue { model.cancelLogout() }
-                    }
-                ),
+                isPresented: $logoutConfirmationVisible,
                 titleVisibility: .visible
             ) {
                 Button("ログアウト", role: .destructive) {
-                    model.confirmLogout()
+                    authState.logout()
+                    rateLimit.reset()
                 }
-                Button("キャンセル", role: .cancel) {
-                    model.cancelLogout()
-                }
+                Button("キャンセル", role: .cancel) {}
             }
-        } else {
-            ProgressView()
+        }
+        .onChange(of: authState.phase) { _, _ in
+            rateLimit.reset()
         }
     }
 
     @ViewBuilder
-    private func authSection(model: SettingsModel) -> some View {
-        switch model.profilePhase {
+    private var authSection: some View {
+        switch authState.profilePhase {
         case .hidden:
             Button {
                 authState.beginSigningIn()
@@ -98,15 +70,15 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            logoutButton(model: model)
+            logoutButton
 
         case let .loaded(user):
             profileRow(user: user, cached: false)
-            logoutButton(model: model)
+            logoutButton
 
         case let .cached(user):
             profileRow(user: user, cached: true)
-            logoutButton(model: model)
+            logoutButton
         }
     }
 
@@ -135,9 +107,9 @@ struct SettingsView: View {
         AvatarImageView(url: url, size: 48)
     }
 
-    private func logoutButton(model: SettingsModel) -> some View {
+    private var logoutButton: some View {
         Button(role: .destructive) {
-            model.requestLogout()
+            logoutConfirmationVisible = true
         } label: {
             Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
         }

@@ -10,10 +10,21 @@ enum GitHubAuthPhase: Equatable, Sendable {
 
 @Observable
 final class GitHubAuthState {
+
+    enum ProfilePhase: Sendable, Equatable {
+        case hidden
+        case loading
+        case loaded(GitHubAuthenticatedUser)
+        case cached(GitHubAuthenticatedUser)
+    }
+
     private(set) var phase: GitHubAuthPhase
     private(set) var token: String?
     private(set) var user: GitHubAuthenticatedUser?
     private(set) var userIsFromCache: Bool = false
+
+    var inFlightTask: Task<Void, Never>? { profileTask }
+    private var profileTask: Task<Void, Never>?
 
     private let service: GitHubAuthServiceProtocol
     private let profileCache: UserDefaultsStorage<GitHubAuthenticatedUser>?
@@ -33,8 +44,42 @@ final class GitHubAuthState {
                 self.user = cached
                 self.userIsFromCache = true
             }
+            refreshProfile()
         } else {
             self.phase = .signedOut
+        }
+    }
+
+    var profilePhase: ProfilePhase {
+        switch phase {
+        case .signedOut, .signingIn:
+            return .hidden
+        case .signedIn:
+            if let user {
+                return userIsFromCache ? .cached(user) : .loaded(user)
+            }
+            return .loading
+        }
+    }
+
+    private func refreshProfile() {
+        guard phase == .signedIn, let token else { return }
+
+        profileTask?.cancel()
+        profileTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let user = try await self.service.fetchAuthenticatedUser(token: token)
+                guard !Task.isCancelled else { return }
+                if self.phase == .signedIn {
+                    self.updateProfile(user)
+                }
+            } catch is CancellationError {
+                // キャンセルは正常フロー
+            } catch {
+                // 401 は AuthenticatedHttpClient が処理済み。
+                // network / 5xx は既存プロフィールを維持 (PRD AC-5.2)。
+            }
         }
     }
 
