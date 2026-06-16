@@ -38,13 +38,9 @@ struct SettingsView: View {
             ) {
                 Button("ログアウト", role: .destructive) {
                     authState.logout()
-                    rateLimit.reset()
                 }
                 Button("キャンセル", role: .cancel) {}
             }
-        }
-        .onChange(of: authState.phase) { _, _ in
-            rateLimit.reset()
         }
     }
 

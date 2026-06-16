@@ -16,6 +16,7 @@ struct GitHubAuthStateTests {
     private func makeState(
         initialToken: String? = nil,
         cachedProfile: GitHubAuthenticatedUser? = nil,
+        rateLimit: RateLimitObserver? = nil,
         userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample)
     ) -> (state: GitHubAuthState, repository: MockGitHubAuthRepository, cache: UserDefaultsStorage<GitHubAuthenticatedUser>) {
         let cache = makeStorage()
@@ -26,7 +27,7 @@ struct GitHubAuthStateTests {
             userResult: userResult,
             initialToken: initialToken
         )
-        let state = GitHubAuthState(repository: repository, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, rateLimit: rateLimit, profileCache: cache)
         return (state, repository, cache)
     }
 
@@ -98,7 +99,9 @@ struct GitHubAuthStateTests {
         let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
-        let state = GitHubAuthState(repository: repository, profileCache: cache)
+        let rateLimit = RateLimitObserver()
+        rateLimit.update(from: ["x-ratelimit-limit": "5000", "x-ratelimit-remaining": "4999"])
+        let state = GitHubAuthState(repository: repository, rateLimit: rateLimit, profileCache: cache)
 
         state.logout()
 
@@ -107,13 +110,16 @@ struct GitHubAuthStateTests {
         #expect(state.user == nil)
         #expect(repository.loadToken() == nil)
         #expect(cache.load() == nil)
+        #expect(rateLimit.snapshots.isEmpty)
     }
 
     @Test func handle401_whenSignedIn_clearsStateAndCache() {
         let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
-        let state = GitHubAuthState(repository: repository, profileCache: cache)
+        let rateLimit = RateLimitObserver()
+        rateLimit.update(from: ["x-ratelimit-limit": "5000", "x-ratelimit-remaining": "4999"])
+        let state = GitHubAuthState(repository: repository, rateLimit: rateLimit, profileCache: cache)
 
         state.handle401()
 
@@ -122,6 +128,7 @@ struct GitHubAuthStateTests {
         #expect(state.user == nil)
         #expect(repository.loadToken() == nil)
         #expect(cache.load() == nil)
+        #expect(rateLimit.snapshots.isEmpty)
     }
 
     @Test func handle401_whenSignedOut_doesNothing() {

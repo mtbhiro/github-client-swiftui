@@ -28,14 +28,17 @@ final class GitHubAuthState {
 
     private let repository: GitHubAuthRepositoryProtocol
     private let profileCache: UserDefaultsStorage<GitHubAuthenticatedUser>?
+    private let rateLimit: RateLimitObserver?
 
     init(
         repository: GitHubAuthRepositoryProtocol,
+        rateLimit: RateLimitObserver? = nil,
         profileCache: UserDefaultsStorage<GitHubAuthenticatedUser>? = UserDefaultsStorage(
             key: "github.auth.profileCache"
         )
     ) {
         self.repository = repository
+        self.rateLimit = rateLimit
         self.profileCache = profileCache
         if let stored = repository.loadToken() {
             self.token = stored
@@ -130,6 +133,7 @@ final class GitHubAuthState {
         user = nil
         userIsFromCache = false
         profileCache?.delete()
+        rateLimit?.reset()
         phase = .signedOut
     }
 }

@@ -35,8 +35,8 @@ struct AuthStack {
 
     static func makeProduction() -> AuthStack {
         let authRepository = GitHubAuthRepository()
-        let authState = GitHubAuthState(repository: authRepository)
         let rateLimit = RateLimitObserver()
+        let authState = GitHubAuthState(repository: authRepository, rateLimit: rateLimit)
         let factory = AuthFactory(repository: authRepository)
         let httpClient = AuthenticatedHttpClient(
             upstream: URLSessionHttpClient(session: URLSessionHttpClient.makeDefaultSession()),
