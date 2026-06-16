@@ -16,18 +16,16 @@ struct DeviceFlowModelTests {
                 interval: 1
             )
         ),
-        userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample),
-        clientID: String? = "ci"
-    ) -> (model: DeviceFlowModel, mock: MockGitHubAuthService, authState: GitHubAuthState, coordinator: AppCoordinator) {
-        let mock = MockGitHubAuthService(
+        userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample)
+    ) -> (model: DeviceFlowModel, mock: MockGitHubAuthRepository, authState: GitHubAuthState, coordinator: AppCoordinator) {
+        let mock = MockGitHubAuthRepository(
             deviceCodeResult: deviceCodeResult,
-            userResult: userResult,
-            clientIDValue: clientID
+            userResult: userResult
         )
-        let authState = GitHubAuthState(service: mock, profileCache: nil)
+        let authState = GitHubAuthState(repository: mock, profileCache: nil)
         let coordinator = AppCoordinator()
         let model = DeviceFlowModel(
-            service: mock,
+            repository: mock,
             authState: authState,
             coordinator: coordinator,
             intervalScale: 0.0
@@ -63,7 +61,17 @@ struct DeviceFlowModelTests {
     }
 
     @Test func start_emptyClientID_showsErrorDeviceCode_config() async {
-        let (model, _, _, _) = makeSUT(clientID: "")
+        let mock = MockGitHubAuthRepository(
+            deviceCodeResult: .failure(GitHubAuthConfigError.missingClientID)
+        )
+        let authState = GitHubAuthState(repository: mock, profileCache: nil)
+        let coordinator = AppCoordinator()
+        let model = DeviceFlowModel(
+            repository: mock,
+            authState: authState,
+            coordinator: coordinator,
+            intervalScale: 0.0
+        )
         model.start()
         await waitForInflight(model)
         #expect(model.phase == .errorDeviceCode(.config))
@@ -199,4 +207,3 @@ struct DeviceFlowModelTests {
         #expect(model.phase == .errorDeviceCode(.network))
     }
 }
-

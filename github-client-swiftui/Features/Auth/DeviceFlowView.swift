@@ -182,11 +182,12 @@ struct DeviceFlowView: View {
 
 #Preview("polling") {
     let coordinator = AppCoordinator()
+    let mockRepository = MockGitHubAuthRepository()
     NavigationStack {
         DeviceFlowView(
             model: DeviceFlowModel(
-                service: MockGitHubAuthService(),
-                authState: GitHubAuthState(service: MockGitHubAuthService()),
+                repository: mockRepository,
+                authState: GitHubAuthState(repository: mockRepository),
                 coordinator: coordinator,
                 intervalScale: 1.0
             )

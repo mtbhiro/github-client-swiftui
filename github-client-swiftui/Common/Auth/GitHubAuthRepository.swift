@@ -1,13 +1,12 @@
 import Foundation
 
-nonisolated protocol GitHubAuthServiceProtocol: Sendable {
+nonisolated protocol GitHubAuthRepositoryProtocol: Sendable {
     func requestDeviceCode() async throws -> GitHubDeviceCode
     func pollAccessToken(deviceCode: String) async throws -> GitHubAuthTokenOutcome
     func fetchAuthenticatedUser(token: String) async throws -> GitHubAuthenticatedUser
     func saveToken(_ token: String) throws
     func loadToken() -> String?
     func clearToken() throws
-    func clientID() throws -> String
 }
 
 nonisolated enum GitHubAuthConfigError: Error, Equatable {
@@ -25,7 +24,7 @@ nonisolated struct GitHubAuthHosts: Sendable {
     )
 }
 
-nonisolated struct GitHubAuthService: GitHubAuthServiceProtocol {
+nonisolated struct GitHubAuthRepository: GitHubAuthRepositoryProtocol {
     private let httpClient: HttpClient
     private let keychain: KeychainStorage
     private let hosts: GitHubAuthHosts
@@ -107,7 +106,7 @@ nonisolated struct GitHubAuthService: GitHubAuthServiceProtocol {
         try keychain.delete()
     }
 
-    func clientID() throws -> String {
+    private func clientID() throws -> String {
         guard let id = clientIDProvider(), !id.isEmpty else {
             throw GitHubAuthConfigError.missingClientID
         }

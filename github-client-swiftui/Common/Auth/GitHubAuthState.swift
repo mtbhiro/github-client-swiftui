@@ -26,18 +26,18 @@ final class GitHubAuthState {
     var inFlightTask: Task<Void, Never>? { profileTask }
     private var profileTask: Task<Void, Never>?
 
-    private let service: GitHubAuthServiceProtocol
+    private let repository: GitHubAuthRepositoryProtocol
     private let profileCache: UserDefaultsStorage<GitHubAuthenticatedUser>?
 
     init(
-        service: GitHubAuthServiceProtocol,
+        repository: GitHubAuthRepositoryProtocol,
         profileCache: UserDefaultsStorage<GitHubAuthenticatedUser>? = UserDefaultsStorage(
             key: "github.auth.profileCache"
         )
     ) {
-        self.service = service
+        self.repository = repository
         self.profileCache = profileCache
-        if let stored = service.loadToken() {
+        if let stored = repository.loadToken() {
             self.token = stored
             self.phase = .signedIn
             if let cached = profileCache?.load() {
@@ -69,16 +69,13 @@ final class GitHubAuthState {
         profileTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let user = try await self.service.fetchAuthenticatedUser(token: token)
+                let user = try await self.repository.fetchAuthenticatedUser(token: token)
                 guard !Task.isCancelled else { return }
                 if self.phase == .signedIn {
                     self.updateProfile(user)
                 }
             } catch is CancellationError {
-                // キャンセルは正常フロー
             } catch {
-                // 401 は AuthenticatedHttpClient が処理済み。
-                // network / 5xx は既存プロフィールを維持 (PRD AC-5.2)。
             }
         }
     }
@@ -96,7 +93,7 @@ final class GitHubAuthState {
     @discardableResult
     func completeSignIn(token: String, user: GitHubAuthenticatedUser) -> Bool {
         do {
-            try service.saveToken(token)
+            try repository.saveToken(token)
         } catch {
             return false
         }
@@ -128,7 +125,7 @@ final class GitHubAuthState {
     }
 
     private func clearSession() {
-        try? service.clearToken()
+        try? repository.clearToken()
         token = nil
         user = nil
         userIsFromCache = false

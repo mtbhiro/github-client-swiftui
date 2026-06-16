@@ -17,24 +17,24 @@ struct GitHubAuthStateTests {
         initialToken: String? = nil,
         cachedProfile: GitHubAuthenticatedUser? = nil,
         userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample)
-    ) -> (state: GitHubAuthState, service: MockGitHubAuthService, cache: UserDefaultsStorage<GitHubAuthenticatedUser>) {
+    ) -> (state: GitHubAuthState, repository: MockGitHubAuthRepository, cache: UserDefaultsStorage<GitHubAuthenticatedUser>) {
         let cache = makeStorage()
         if let cachedProfile {
             cache.save(cachedProfile)
         }
-        let service = MockGitHubAuthService(
+        let repository = MockGitHubAuthRepository(
             userResult: userResult,
             initialToken: initialToken
         )
-        let state = GitHubAuthState(service: service, profileCache: cache)
-        return (state, service, cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
+        return (state, repository, cache)
     }
 
     // MARK: - init
 
     @Test func init_withNoStoredToken_isSignedOut() {
-        let service = MockGitHubAuthService()
-        let state = GitHubAuthState(service: service, profileCache: makeStorage())
+        let repository = MockGitHubAuthRepository()
+        let state = GitHubAuthState(repository: repository, profileCache: makeStorage())
 
         #expect(state.phase == .signedOut)
         #expect(state.token == nil)
@@ -42,19 +42,19 @@ struct GitHubAuthStateTests {
     }
 
     @Test func init_withStoredToken_restoresSignedIn() {
-        let service = MockGitHubAuthService(initialToken: "stored-token")
-        let state = GitHubAuthState(service: service, profileCache: makeStorage())
+        let repository = MockGitHubAuthRepository(initialToken: "stored-token")
+        let state = GitHubAuthState(repository: repository, profileCache: makeStorage())
 
         #expect(state.phase == .signedIn)
         #expect(state.token == "stored-token")
     }
 
     @Test func init_withStoredToken_andCachedProfile_loadsCachedProfile() {
-        let service = MockGitHubAuthService(initialToken: "tok")
+        let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
 
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
 
         #expect(state.user == .sample)
         #expect(state.userIsFromCache == true)
@@ -63,9 +63,9 @@ struct GitHubAuthStateTests {
     // MARK: - completeSignIn
 
     @Test func completeSignIn_savesTokenAndUpdatesState() {
-        let service = MockGitHubAuthService()
+        let repository = MockGitHubAuthRepository()
         let cache = makeStorage()
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
 
         let result = state.completeSignIn(token: "new-token", user: .sample)
 
@@ -74,15 +74,15 @@ struct GitHubAuthStateTests {
         #expect(state.token == "new-token")
         #expect(state.user == .sample)
         #expect(state.userIsFromCache == false)
-        #expect(service.loadToken() == "new-token")
+        #expect(repository.loadToken() == "new-token")
         #expect(cache.load() == .sample)
     }
 
     @Test func completeSignIn_whenTokenSaveFails_returnsFalseAndKeepsSignedOut() {
-        let service = MockGitHubAuthService()
-        service.setSaveTokenError(KeychainStorageError.osStatus(-25300))
+        let repository = MockGitHubAuthRepository()
+        repository.setSaveTokenError(KeychainStorageError.osStatus(-25300))
         let cache = makeStorage()
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
 
         let result = state.completeSignIn(token: "tok", user: .sample)
 
@@ -95,38 +95,38 @@ struct GitHubAuthStateTests {
     // MARK: - logout / handle401
 
     @Test func logout_clearsStateAndCache() {
-        let service = MockGitHubAuthService(initialToken: "tok")
+        let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
 
         state.logout()
 
         #expect(state.phase == .signedOut)
         #expect(state.token == nil)
         #expect(state.user == nil)
-        #expect(service.loadToken() == nil)
+        #expect(repository.loadToken() == nil)
         #expect(cache.load() == nil)
     }
 
     @Test func handle401_whenSignedIn_clearsStateAndCache() {
-        let service = MockGitHubAuthService(initialToken: "tok")
+        let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
 
         state.handle401()
 
         #expect(state.phase == .signedOut)
         #expect(state.token == nil)
         #expect(state.user == nil)
-        #expect(service.loadToken() == nil)
+        #expect(repository.loadToken() == nil)
         #expect(cache.load() == nil)
     }
 
     @Test func handle401_whenSignedOut_doesNothing() {
-        let service = MockGitHubAuthService()
-        let state = GitHubAuthState(service: service, profileCache: makeStorage())
+        let repository = MockGitHubAuthRepository()
+        let state = GitHubAuthState(repository: repository, profileCache: makeStorage())
 
         state.handle401()
         #expect(state.phase == .signedOut)
@@ -135,8 +135,8 @@ struct GitHubAuthStateTests {
     // MARK: - beginSigningIn / cancelSigningIn
 
     @Test func beginSigningIn_setsSigningInPhase_andCancelReverts() {
-        let service = MockGitHubAuthService()
-        let state = GitHubAuthState(service: service, profileCache: makeStorage())
+        let repository = MockGitHubAuthRepository()
+        let state = GitHubAuthState(repository: repository, profileCache: makeStorage())
 
         state.beginSigningIn()
         #expect(state.phase == .signingIn)
@@ -148,10 +148,10 @@ struct GitHubAuthStateTests {
     // MARK: - updateProfile
 
     @Test func updateProfile_onlyAppliesWhenSignedIn_clearsCachedFlag() {
-        let service = MockGitHubAuthService(initialToken: "tok")
+        let repository = MockGitHubAuthRepository(initialToken: "tok")
         let cache = makeStorage()
         cache.save(.sample)
-        let state = GitHubAuthState(service: service, profileCache: cache)
+        let state = GitHubAuthState(repository: repository, profileCache: cache)
         #expect(state.userIsFromCache == true)
 
         let fresh = GitHubAuthenticatedUser(login: "x", name: "X", avatarURL: nil)

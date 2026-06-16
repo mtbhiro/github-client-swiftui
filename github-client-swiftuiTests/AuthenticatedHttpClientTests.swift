@@ -14,7 +14,7 @@ struct AuthenticatedHttpClientTests {
         let stub: StubURLProtocol.Handle
         let authState: GitHubAuthState
         let rateLimit: RateLimitObserver
-        let mockService: MockGitHubAuthService
+        let mockRepository: MockGitHubAuthRepository
     }
 
     private func makeStorage() -> UserDefaultsStorage<GitHubAuthenticatedUser> {
@@ -35,11 +35,11 @@ struct AuthenticatedHttpClientTests {
         configuration.protocolClasses = [StubURLProtocol.self]
         let session = URLSession(configuration: configuration)
         let upstream = URLSessionHttpClient(session: session)
-        let mockService = MockGitHubAuthService(initialToken: initialToken)
-        let authState = GitHubAuthState(service: mockService, profileCache: makeStorage())
+        let mockRepository = MockGitHubAuthRepository(initialToken: initialToken)
+        let authState = GitHubAuthState(repository: mockRepository, profileCache: makeStorage())
         let rateLimit = RateLimitObserver()
         let client = AuthenticatedHttpClient(upstream: upstream, authState: authState, rateLimit: rateLimit)
-        return SUT(client: client, stub: stub, authState: authState, rateLimit: rateLimit, mockService: mockService)
+        return SUT(client: client, stub: stub, authState: authState, rateLimit: rateLimit, mockRepository: mockRepository)
     }
 
     /// `*.github.com` 判定の対象外にしたいテスト用に、無関係なホストで stub を払い出す。

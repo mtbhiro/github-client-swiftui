@@ -22,20 +22,18 @@ final class DeviceFlowModel {
     var inFlightTask: Task<Void, Never>? { currentTask }
 
     private var currentTask: Task<Void, Never>?
-    private let service: GitHubAuthServiceProtocol
+    private let repository: GitHubAuthRepositoryProtocol
     private let authState: GitHubAuthState
     private let coordinator: AppCoordinator
-    /// テスト時に polling interval を圧縮するための係数。
-    /// `interval` 秒 * `intervalScale` の `Duration` を `Task.sleep` に渡す。
     private let intervalScale: Double
 
     init(
-        service: GitHubAuthServiceProtocol,
+        repository: GitHubAuthRepositoryProtocol,
         authState: GitHubAuthState,
         coordinator: AppCoordinator,
         intervalScale: Double = 1.0
     ) {
-        self.service = service
+        self.repository = repository
         self.authState = authState
         self.coordinator = coordinator
         self.intervalScale = intervalScale
@@ -65,7 +63,7 @@ final class DeviceFlowModel {
     private func runDeviceFlow() async {
         let code: GitHubDeviceCode
         do {
-            code = try await service.requestDeviceCode()
+            code = try await repository.requestDeviceCode()
         } catch is CancellationError {
             return
         } catch GitHubAuthConfigError.missingClientID {
@@ -99,11 +97,10 @@ final class DeviceFlowModel {
 
             let outcome: GitHubAuthTokenOutcome
             do {
-                outcome = try await service.pollAccessToken(deviceCode: deviceCode.deviceCode)
+                outcome = try await repository.pollAccessToken(deviceCode: deviceCode.deviceCode)
             } catch is CancellationError {
                 return
             } catch {
-                // ネットワーク障害 / 5xx 等は polling を継続する（PRD AC-7.4）。
                 continue
             }
 
@@ -133,7 +130,7 @@ final class DeviceFlowModel {
 
     private func handleSuccess(token: String) async {
         do {
-            let user = try await service.fetchAuthenticatedUser(token: token)
+            let user = try await repository.fetchAuthenticatedUser(token: token)
             authState.completeSignIn(token: token, user: user)
             coordinator.popToRoot(of: .settings)
         } catch is CancellationError {

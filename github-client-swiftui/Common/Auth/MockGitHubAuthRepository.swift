@@ -1,15 +1,12 @@
 import Foundation
 import os
 
-/// テスト / Preview 用の GitHubAuthService の Mock。Keychain と handler を含む状態はロックで守るため
-/// `nonisolated final class` のまま `Sendable` を満たせる。
-nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendable {
+nonisolated final class MockGitHubAuthRepository: GitHubAuthRepositoryProtocol, Sendable {
 
     private struct MockState: Sendable {
         var deviceCodeResult: Result<GitHubDeviceCode, Error> = .success(.sample)
         var pollHandler: (@Sendable (String) async throws -> GitHubAuthTokenOutcome)?
         var userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample)
-        var clientIDValue: String? = "mock-client-id"
         var token: String?
         var saveTokenError: (any Error)?
         var pollCallCount: Int = 0
@@ -22,13 +19,11 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
     init(
         deviceCodeResult: Result<GitHubDeviceCode, Error> = .success(.sample),
         userResult: Result<GitHubAuthenticatedUser, Error> = .success(.sample),
-        clientIDValue: String? = "mock-client-id",
         initialToken: String? = nil
     ) {
         stateLock.withLock { state in
             state.deviceCodeResult = deviceCodeResult
             state.userResult = userResult
-            state.clientIDValue = clientIDValue
             state.token = initialToken
         }
     }
@@ -53,14 +48,13 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
         stateLock.withLock { $0.userResult = result }
     }
 
-    func setClientID(_ value: String?) {
-        stateLock.withLock { $0.clientIDValue = value }
+    func setSaveTokenError(_ error: (any Error)?) {
+        stateLock.withLock { $0.saveTokenError = error }
     }
 
     // MARK: - Protocol
 
     func requestDeviceCode() async throws -> GitHubDeviceCode {
-        _ = try clientID()
         let result = stateLock.withLock { $0.deviceCodeResult }
         return try result.get()
     }
@@ -82,10 +76,6 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
         return try result.get()
     }
 
-    func setSaveTokenError(_ error: (any Error)?) {
-        stateLock.withLock { $0.saveTokenError = error }
-    }
-
     func saveToken(_ token: String) throws {
         try stateLock.withLock { state in
             if let error = state.saveTokenError { throw error }
@@ -100,14 +90,6 @@ nonisolated final class MockGitHubAuthService: GitHubAuthServiceProtocol, Sendab
 
     func clearToken() throws {
         stateLock.withLock { $0.token = nil }
-    }
-
-    func clientID() throws -> String {
-        let value = stateLock.withLock { $0.clientIDValue }
-        guard let value, !value.isEmpty else {
-            throw GitHubAuthConfigError.missingClientID
-        }
-        return value
     }
 }
 

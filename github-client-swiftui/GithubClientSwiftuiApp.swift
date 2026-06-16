@@ -34,22 +34,22 @@ struct AuthStack {
     let repository: any GithubRepoRepositoryProtocol
 
     static func makeProduction() -> AuthStack {
-        let service = GitHubAuthService()
-        let authState = GitHubAuthState(service: service)
+        let authRepository = GitHubAuthRepository()
+        let authState = GitHubAuthState(repository: authRepository)
         let rateLimit = RateLimitObserver()
-        let factory = AuthFactory(service: service)
+        let factory = AuthFactory(repository: authRepository)
         let httpClient = AuthenticatedHttpClient(
             upstream: URLSessionHttpClient(session: URLSessionHttpClient.makeDefaultSession()),
             authState: authState,
             rateLimit: rateLimit
         )
-        let repository = GithubRepoRepository(httpClient: httpClient)
+        let repoRepository = GithubRepoRepository(httpClient: httpClient)
 
         return AuthStack(
             authState: authState,
             rateLimit: rateLimit,
             authFactory: factory,
-            repository: repository
+            repository: repoRepository
         )
     }
 }
