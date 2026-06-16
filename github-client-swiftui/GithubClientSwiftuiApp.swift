@@ -4,6 +4,7 @@ import SwiftUI
 struct GithubClientSwiftuiApp: App {
     @State private var bookmarkStore = BookmarkStore()
     @State private var coordinator = AppCoordinator()
+    @State private var searchCache = RepositorySearchCache()
     @State private var authStack: AuthStack
 
     init() {
@@ -16,6 +17,7 @@ struct GithubClientSwiftuiApp: App {
             RootView()
                 .environment(bookmarkStore)
                 .environment(coordinator)
+                .environment(\.searchCache, searchCache)
                 .environment(authStack.authState)
                 .environment(authStack.rateLimit)
                 .environment(authStack.authFactory)

@@ -1,6 +1,17 @@
 import SwiftUI
 
 struct RepositorySearchView: View {
+    @Environment(\.searchCache) private var searchCache
+    @Environment(\.githubRepository) private var repository
+
+    var body: some View {
+        RepositorySearchContentView(
+            model: RepositorySearchModel(repository: repository, cache: searchCache)
+        )
+    }
+}
+
+private struct RepositorySearchContentView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(BookmarkStore.self) private var bookmarkStore
     @Environment(\.githubRepository) private var repository
@@ -8,8 +19,8 @@ struct RepositorySearchView: View {
     @State private var isShowingFilters = false
     @FocusState private var isQueryFieldFocused: Bool
 
-    init(cache: RepositorySearchCache, repository: any GithubRepoRepositoryProtocol) {
-        _model = State(initialValue: RepositorySearchModel(repository: repository, cache: cache))
+    init(model: RepositorySearchModel) {
+        _model = State(initialValue: model)
     }
 
     var body: some View {
@@ -268,7 +279,9 @@ struct RepositorySearchView: View {
 }
 
 #Preview("idle") {
-    RepositorySearchView(cache: RepositorySearchCache(), repository: MockGithubRepoRepository())
+    RepositorySearchView()
         .environment(AppCoordinator())
         .environment(BookmarkStore(items: []))
+        .environment(\.searchCache, RepositorySearchCache())
+        .environment(\.githubRepository, MockGithubRepoRepository())
 }

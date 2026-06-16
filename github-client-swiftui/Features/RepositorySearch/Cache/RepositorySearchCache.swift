@@ -1,5 +1,6 @@
 import Foundation
 import os
+import SwiftUI
 
 /// リポジトリ検索結果の短期メモリキャッシュ (PRD: repository-search-cache.md §5)。
 /// 同期参照前提 (AC-1.1) のため、View Model と同じ MainActor 上で動く UI 状態の付属物として扱う。
@@ -56,5 +57,22 @@ final class RepositorySearchCache {
             entries.removeValue(forKey: oldest)
             accessOrder.removeFirst()
         }
+    }
+}
+
+private struct RepositorySearchCacheEnvironmentKey: EnvironmentKey {
+    static let defaultValue: RepositorySearchCache = {
+        #if DEBUG
+        return RepositorySearchCache()
+        #else
+        fatalError("searchCache environment key not injected")
+        #endif
+    }()
+}
+
+extension EnvironmentValues {
+    var searchCache: RepositorySearchCache {
+        get { self[RepositorySearchCacheEnvironmentKey.self] }
+        set { self[RepositorySearchCacheEnvironmentKey.self] = newValue }
     }
 }
