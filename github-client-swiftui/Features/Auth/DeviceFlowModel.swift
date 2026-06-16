@@ -87,13 +87,9 @@ final class DeviceFlowModel {
             let waitDuration = Duration.milliseconds(Int(intervalSeconds * 1000 * intervalScale))
             do {
                 try await Task.sleep(for: waitDuration)
-            } catch is CancellationError {
-                return
             } catch {
                 return
             }
-
-            if Task.isCancelled { return }
 
             let outcome: GitHubAuthTokenOutcome
             do {
@@ -103,8 +99,6 @@ final class DeviceFlowModel {
             } catch {
                 continue
             }
-
-            if Task.isCancelled { return }
 
             switch outcome {
             case .pending:
